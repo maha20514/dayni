@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;           /* أسود غامق واضح */
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --success: #16a34a;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Noto Sans Arabic", system-ui, sans-serif;
+  direction: rtl;
+  font-weight: 500;               /* يجعل الخط أقوى */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* تحسينات البطاقات والنصوص */
+.card {
+  @apply bg-white shadow-2xl shadow-slate-200/70 border border-slate-100 rounded-3xl overflow-hidden;
+}
+
+.text-muted {
+  color: #475569 !important;     /* رمادي أغمق من السابق */
+}
+
+.table th {
+  @apply py-6 px-6 text-slate-600 font-semibold text-base bg-slate-50;
+}
+
+.table td {
+  @apply py-6 px-6 text-slate-900 font-medium;   /* نص أسود غامق */
+}
+
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/30;
+}
+
+.btn-success {
+  @apply bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/30;
+}
+
+.input {
+  @apply w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl px-6 py-4 text-lg outline-none;
+}
+/* تحسين المسافات والجدول */
+.container {
+  @apply max-w-7xl mx-auto px-6 lg:px-12;
+}
+
+.card {
+  @apply bg-white shadow-xl border border-slate-100 rounded-3xl overflow-hidden;
+}
+
+/* تحسين الجدول ليكون أنيق ومتجاوب */
+.table-container {
+  @apply overflow-x-auto;
+}
+
+.table {
+  @apply w-full min-w-full;
+}
+
+.table th, .table td {
+  @apply px-6 py-5 text-right;
+}
+
+.table th {
+  @apply text-slate-600 font-semibold bg-slate-50;
+}
+
+.table td {
+  @apply text-slate-900 font-medium;
+}
+
+/* جعل الاسم يظهر بشكل أفضل ومتناسق */
+.name-cell {
+  @apply font-semibold text-slate-900;
+}
