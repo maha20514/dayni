@@ -13,6 +13,7 @@ export async function POST(req: PaymentRequest) {
     const body = await req.json();
 
     const payment = await Payment.create({
+      userId: body.userId,
       customerId: body.customerId,
       amount: body.amount
     });

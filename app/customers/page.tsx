@@ -1,36 +1,53 @@
+/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable @next/next/no-async-client-component */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 import Link from "next/link";
-import { connectDB } from "@/lib/mongodb";
-import { Customer } from "@/models/Customer";
+import { useEffect, useState } from "react";
 
-export const dynamic = "force-dynamic";
-
-async function getCustomers() {
-  try {
-    await connectDB();
-    console.log("✅ DB connected, fetching customers...");
-
-    const customers = await Customer.find()
-      .sort({ createdAt: -1 })
-      .lean();
-
-    console.log(`📊 Found ${customers.length} customers in database`);
-
-    return customers.map((c: any) => ({
-      id: c._id.toString(),
-      name: c.name || "",
-      phone: c.phone || "",
-      totalDebt: Number(c.totalDebt || 0),
-    }));
-  } catch (error) {
-    console.error("❌ Failed to fetch customers:", error);
-    return [];
-  }
+interface CustomerType {
+  id: string;
+  name: string;
+  phone: string;
+  totalDebt: number;
 }
 
-export default async function CustomersPage() {
-  const customers = await getCustomers();
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState<CustomerType[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  const fetchCustomers = async () => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return setLoading(false);
+
+    try {
+      const res = await fetch("/api/customers");
+      const data = await res.json();
+
+      // فلترة العملاء حسب userId
+      const filtered = data.filter((c: any) => c.userId === userId);
+      setCustomers(filtered);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  // عرض رسالة التحميل
+  if (loading) {
+    return (
+      <div className="container py-12 text-center">
+        <p className="text-lg text-slate-600">⏳ جاري التحميل...</p>
+      </div>
+    );
+  }
+
+  // عرض لا يوجد عملاء
   if (!customers || customers.length === 0) {
     return (
       <div className="container py-12">
@@ -53,6 +70,7 @@ export default async function CustomersPage() {
     );
   }
 
+  // عرض قائمة العملاء
   return (
     <div className="container py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">

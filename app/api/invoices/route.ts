@@ -12,6 +12,7 @@ export async function POST(req: InvoiceRequest) {
     const body = await req.json();
 
     const invoice = await Invoice.create({
+       userId: body.userId,
       customerId: body.customerId,
       amount: body.amount,
       description: body.description

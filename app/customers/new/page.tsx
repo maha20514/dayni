@@ -9,6 +9,9 @@ export default function NewCustomerPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const userId = localStorage.getItem("userId"); // لازم تحفظينه بعد التسجيل
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -16,7 +19,7 @@ export default function NewCustomerPage() {
     await fetch("/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone }),
+      body: JSON.stringify({ userId, name, phone }),
     });
 
     setLoading(false);

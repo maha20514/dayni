@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const customer = await Customer.create({
+      userId: body.userId,
       name: body.name,
       phone: body.phone
     });
