@@ -1,29 +1,61 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import { Invoice } from "@/models/Invoice";
+import { Customer } from "@/models/Customer";
+import { User } from "@/models/User";
 
-import { NextRequest as InvoiceRequest, NextResponse as InvoiceResponse } from "next/server";
-import { connectDB as connectInvoiceDB } from "@/lib/mongodb";
-import {Invoice} from "@/models/Invoice";
-import {Customer}  from "@/models/Customer";
-
-export async function POST(req: InvoiceRequest) {
+export async function POST(req: NextRequest) {
   try {
-    await connectInvoiceDB();
+    await connectDB();
 
     const body = await req.json();
+    console.log("📥 Invoice Body Received:", body);
 
-    const invoice = await Invoice.create({
-       userId: body.userId,
-      customerId: body.customerId,
-      amount: body.amount,
-      description: body.description
-    });
+    const { userId, customerId, amount, description } = body;
 
-    await Customer.findByIdAndUpdate(body.customerId, {
-      $inc: { totalDebt: body.amount }
-    });
-
-    return InvoiceResponse.json(invoice, { status: 201 });
-  } catch (error) {
-    return InvoiceResponse.json({ error: "Failed to create invoice" }, { status: 500 });
+    if (!userId || !customerId || !amount || amount <= 0 || !description) {
+      return NextResponse.json({ 
+        error: "جميع البيانات مطلوبة (userId, customerId, amount, description)" 
+      }, { status: 400 });
     }
+
+    // التحقق من وجود المستخدم والعميل
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+    }
+
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+    }
+
+    // إنشاء الفاتورة
+    const invoice = await Invoice.create({
+      userId,
+      customerId,
+      amount: Number(amount),
+      description: description.trim(),
+      date: new Date(),
+    });
+
+    // تحديث رصيد العميل (+)
+    await Customer.findByIdAndUpdate(
+      customerId,
+      { $inc: { totalDebt: Number(amount) } },
+      { new: true }
+    );
+
+    console.log("✅ Invoice Created Successfully:", invoice._id);
+
+    return NextResponse.json(invoice, { status: 201 });
+
+  } catch (error: any) {
+    console.error("❌ Create Invoice Error:", error.message);
+    return NextResponse.json({ 
+      error: "Failed to create invoice", 
+      details: error.message 
+    }, { status: 500 });
+  }
 }

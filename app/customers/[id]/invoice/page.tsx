@@ -11,25 +11,52 @@ export default function CreateInvoicePage() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const userId = localStorage.getItem("userId");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId || !amount) return;
 
+    if (!customerId || !amount || !description.trim()) {
+      setError("يرجى إدخال المبلغ والوصف");
+      return;
+    }
+
+    if (Number(amount) <= 0) {
+      setError("المبلغ يجب أن يكون أكبر من صفر");
+      return;
+    }
+
+    setError("");
     setLoading(true);
 
-    await fetch("/api/invoices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId,
-        amount: Number(amount),
-        description: description.trim(),
-      }),
-    });
+    try {
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          customerId,
+          amount: Number(amount),
+          description: description.trim(),
+        }),
+      });
 
-    setLoading(false);
-    router.push(`/customers/${customerId}`);
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("✅ تم إصدار الفاتورة بنجاح");
+        router.push(`/customers/${customerId}`);
+      } else {
+        setError(data.error || "فشل في إصدار الفاتورة");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("حدث خطأ في الاتصال بالخادم");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,12 +65,14 @@ export default function CreateInvoicePage() {
         <div className="text-center mb-10">
           <div className="text-6xl mb-4">📄</div>
           <h2 className="text-3xl font-bold text-slate-900">إصدار فاتورة جديدة</h2>
-          <p className="text-slate-500 mt-2">أدخل تفاصيل الفاتورة</p>
+          <p className="text-slate-500 mt-2">أدخل تفاصيل الفاتورة للعميل</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div>
-            <label className="block text-sm font-semibold text-slate-600 mb-2">المبلغ (ريال)</label>
+            <label className="block text-sm font-semibold text-slate-600 mb-2">
+              المبلغ (ريال)
+            </label>
             <input
               type="number"
               className="input text-2xl font-medium"
@@ -51,11 +80,14 @@ export default function CreateInvoicePage() {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
               required
+              min="1"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-600 mb-2">وصف الفاتورة</label>
+            <label className="block text-sm font-semibold text-slate-600 mb-2">
+              وصف الفاتورة
+            </label>
             <textarea
               className="input min-h-[120px] resize-y"
               value={description}
@@ -65,12 +97,18 @@ export default function CreateInvoicePage() {
             />
           </div>
 
+          {error && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm border border-red-100">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
             className="btn-primary w-full text-xl py-4 mt-6 disabled:opacity-70 flex items-center justify-center gap-3"
           >
-            {loading ? "جاري الحفظ..." : "💾 حفظ وإصدار الفاتورة"}
+            {loading ? "جاري إصدار الفاتورة..." : "💾 حفظ وإصدار الفاتورة"}
           </button>
         </form>
       </div>

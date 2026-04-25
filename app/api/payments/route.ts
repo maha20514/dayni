@@ -1,29 +1,47 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import { Payment } from "@/models/Payment";
+import { Customer } from "@/models/Customer";
 
-
-import { NextRequest as PaymentRequest, NextResponse as PaymentResponse } from "next/server";
-import { connectDB as connectPaymentDB } from "@/lib/mongodb";
-import {Payment} from "@/models/Payment";
-import {Customer} from "@/models/Customer";
-
-export async function POST(req: PaymentRequest) {
+export async function POST(req: NextRequest) {
   try {
-    await connectPaymentDB();
+    await connectDB();
 
     const body = await req.json();
+    console.log("📥 Payment Body Received:", body);
+
+    const { userId, customerId, amount } = body;
+
+    if (!userId || !customerId || !amount || amount <= 0) {
+      return NextResponse.json({ 
+        error: "customerId and valid amount are required" 
+      }, { status: 400 });
+    }
 
     const payment = await Payment.create({
-      userId: body.userId,
-      customerId: body.customerId,
-      amount: body.amount
+      userId,
+      customerId,
+      amount: Number(amount),
+      date: new Date(),
     });
 
-    await Customer.findByIdAndUpdate(body.customerId, {
-      $inc: { totalDebt: -body.amount }
-    });
+    // تقليل الرصيد (دفع)
+    await Customer.findByIdAndUpdate(
+      customerId,
+      { $inc: { totalDebt: -Number(amount) } },
+      { new: true }
+    );
 
-    return PaymentResponse.json(payment, { status: 201 });
-  } catch (error) {
-    return PaymentResponse.json({ error: "Failed to create payment" }, { status: 500 });
+    console.log("✅ Payment Created Successfully:", payment._id);
+
+    return NextResponse.json(payment, { status: 201 });
+
+  } catch (error: any) {
+    console.error("❌ Create Payment Error:", error.message);
+    return NextResponse.json({ 
+      error: "Failed to create payment", 
+      details: error.message 
+    }, { status: 500 });
   }
 }

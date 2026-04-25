@@ -2,13 +2,12 @@
 import Link from "next/link";
 
 async function getCustomer(id: string) {
-  try {
-    // Best practice: Call the database function directly instead of fetch (recommended)
-    // But since you want to keep using the API route, here's the robust way:
+  if (!id) return null;
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                   `http://localhost:${process.env.PORT || 3000}`);
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`);
 
     const res = await fetch(`${baseUrl}/api/customers/${id}`, {
       cache: "no-store",
@@ -49,7 +48,7 @@ export default async function CustomerDetails({
 
   return (
     <div className="container py-10 space-y-10">
-      {/* بطاقة رأسية */}
+      {/* معلومات العميل */}
       <div className="card p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-4xl font-bold text-slate-900">{customer.name}</h1>
@@ -67,7 +66,7 @@ export default async function CustomerDetails({
         </div>
       </div>
 
-      {/* الأزرار السريعة */}
+      {/* أزرار الإجراءات */}
       <div className="flex flex-wrap gap-4">
         <Link
           href={`/customers/${customer._id}/invoice`}
@@ -96,32 +95,50 @@ export default async function CustomerDetails({
                 <tr>
                   <th>التاريخ</th>
                   <th>النوع</th>
-                  <th>المبلغ</th>
+                  <th>الوصف</th>
+                  <th className="text-right">المبلغ</th>
+                  <th className="w-28"></th>
                 </tr>
               </thead>
               <tbody>
-                {customer.transactions.map((t: any) => (
-                  <tr key={t._id}>
-                    <td className="font-medium text-slate-600">
-                      {new Date(t.date).toLocaleDateString("ar-SA")}
-                    </td>
-                    <td>
-                      <span
-                        className={`inline-block px-5 py-1.5 rounded-2xl text-sm font-medium ${
-                          t.type === "سند" || t.type === "دفعة"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {t.type}
-                      </span>
-                    </td>
-                    <td className="font-bold text-lg">
-                      {Number(t.amount || 0).toLocaleString()} ريال
-                    </td>
-                    
-                  </tr>
-                ))}
+               {customer.transactions.map((t: any) => {
+                  const isPayment = t.type === "سند" || t.type === "دفعة";
+                  return (
+                    <tr key={t._id} className="hover:bg-slate-50">
+                      <td className="font-medium text-slate-600">
+                        {new Date(t.date).toLocaleDateString("ar-SA")}
+                      </td>
+                      <td>
+                        <span
+                          className={`inline-block px-5 py-1.5 rounded-2xl text-sm font-medium ${
+                            isPayment
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {t.type}
+                        </span>
+                      </td>
+                      <td className="text-slate-600 max-w-xs truncate">
+                        {t.description || "-"}
+                      </td>
+                      <td className={`font-bold text-lg text-right ${
+                        isPayment ? "text-emerald-600" : "text-red-600"
+                      }`}>
+                        {isPayment ? "-" : "+"}
+                        {Number(t.amount || 0).toLocaleString()} ريال
+                      </td>
+                      <td className="text-right">
+                        <Link
+                          href={isPayment ? `/payments/${t._id}` : `/invoices/${t._id}`}
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
+                        >
+                          طباعة
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

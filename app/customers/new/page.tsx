@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -12,19 +13,41 @@ export default function NewCustomerPage() {
   const userId = localStorage.getItem("userId"); // لازم تحفظينه بعد التسجيل
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!name.trim() || !phone.trim()) {
+    alert("يرجى إدخال الاسم ورقم الجوال");
+    return;
+  }
 
-    await fetch("/api/customers", {
+  setLoading(true);
+
+  try {
+    const res = await fetch("/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, name, phone }),
+      body: JSON.stringify({ 
+        userId: localStorage.getItem("userId"), 
+        name: name.trim(), 
+        phone: phone.trim() 
+      }),
     });
 
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("✅ تم إضافة العميل بنجاح");
+      router.push("/customers");
+    } else {
+      alert(data.error || "فشل في إضافة العميل");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("حدث خطأ في الاتصال بالخادم");
+  } finally {
     setLoading(false);
-    router.push("/customers");
-  };
+  }
+};
 
   return (
     <div className="container py-12 max-w-xl mx-auto">
