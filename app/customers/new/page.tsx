@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
 
 export default function NewCustomerPage() {
@@ -10,8 +11,13 @@ export default function NewCustomerPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const userId = localStorage.getItem("userId"); // لازم تحفظينه بعد التسجيل
 
+const [userId, setUserId] = useState<string | null>(null);
+
+useEffect(() => {
+  const id = localStorage.getItem("userId");
+  setUserId(id);
+}, []);
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -27,7 +33,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        userId: localStorage.getItem("userId"), 
+        userId,
         name: name.trim(), 
         phone: phone.trim() 
       }),
