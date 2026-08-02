@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const checkout = await createCheckout(
+    /* const checkout = await createCheckout(
       process.env.LEMON_STORE_ID!,
       variantId,
       {
@@ -44,7 +44,25 @@ export async function POST(req: NextRequest) {
             `${process.env.NEXT_PUBLIC_SITE_URL}/pricing/billing/success`,
         },
       }
-    );
+    ); */
+
+    const checkout = await createCheckout(
+  process.env.LEMON_STORE_ID!,
+  variantId,
+  {
+    checkoutData: {
+      custom: {
+        userId,
+        plan,
+      },
+    },
+    productOptions: {
+      redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing/billing/success`,
+    },
+  }
+);
+
+console.log(JSON.stringify(checkout, null, 2));
 
     const url =
       checkout.data?.data?.attributes?.url;
