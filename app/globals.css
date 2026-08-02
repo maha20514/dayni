@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+/* =========================
+   ROOT VARIABLES
+========================= */
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --success: #16a34a;
+  --success-dark: #15803d;
+  --danger: #dc2626;
+  --danger-dark: #b91c1c;
+  --muted: #64748b;
+}
+
+/* =========================
+   GLOBAL STYLES
+========================= */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Noto Sans Arabic", system-ui, sans-serif;
+  direction: rtl;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  color: var(--foreground);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+.container {
+  @apply max-w-7xl mx-auto px-3 sm:px-6 lg:px-12;
+}
+
+/* =========================
+   CARD
+========================= */
+.card {
+  @apply bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/60 overflow-hidden;
+}
+
+/* =========================
+   TEXT
+========================= */
+.text-muted {
+  color: var(--muted) !important;
+}
+
+/* =========================
+   RESPONSIVE TYPOGRAPHY HELPERS
+========================= */
+.heading-xl {
+  @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight;
+}
+
+.heading-lg {
+  @apply text-xl sm:text-2xl md:text-3xl font-bold leading-tight;
+}
+
+.heading-md {
+  @apply text-lg sm:text-xl md:text-2xl font-bold;
+}
+
+.section-badge {
+  @apply mb-3 sm:mb-4 inline-flex rounded-full px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 
+         bg-blue-600 hover:bg-blue-700 active:scale-[0.98] 
+         text-white font-bold px-4 sm:px-7 py-3 sm:py-4 rounded-xl sm:rounded-2xl 
+         text-sm sm:text-base
+         transition-all shadow-lg shadow-blue-500/25;
+}
+
+.btn-success {
+  @apply inline-flex items-center justify-center gap-2 
+         bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] 
+         text-white font-bold px-4 sm:px-7 py-3 sm:py-4 rounded-xl sm:rounded-2xl 
+         text-sm sm:text-base
+         transition-all shadow-lg shadow-emerald-500/25;
+}
+
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 
+         bg-red-600 hover:bg-red-700 active:scale-[0.98] 
+         text-white font-bold px-4 sm:px-7 py-3 sm:py-4 rounded-xl sm:rounded-2xl 
+         text-sm sm:text-base
+         transition-all shadow-lg shadow-red-500/25;
+}
+
+/* =========================
+   INPUTS
+========================= */
+.input {
+  @apply w-full bg-white border border-slate-300 
+         focus:border-blue-600 focus:ring-4 focus:ring-blue-100 
+         rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base 
+         outline-none transition-all placeholder:text-slate-400;
+}
+
+/* =========================
+   TABLE
+========================= */
+.table-container {
+  @apply w-full overflow-x-auto rounded-2xl sm:rounded-3xl border border-slate-200 bg-white;
+}
+
+.table {
+  @apply w-full min-w-[600px] border-collapse;
+}
+
+.table th,
+.table td {
+  @apply px-3 sm:px-6 py-3 sm:py-5 text-right border-b border-slate-100;
+}
+
+.table th {
+  @apply bg-slate-50 text-slate-600 font-bold text-xs sm:text-sm;
+}
+
+.table td {
+  @apply text-slate-900 font-medium text-xs sm:text-sm;
+}
+
+.table tr {
+  @apply hover:bg-slate-50 transition-colors;
+}
+
+/* =========================
+   SPECIAL CELLS
+========================= */
+.name-cell {
+  @apply font-bold text-slate-900;
+}
+
+/* =========================
+   BADGES
+========================= */
+.badge-success {
+  @apply inline-flex items-center rounded-full 
+         bg-emerald-100 px-2.5 sm:px-4 py-1 sm:py-1.5 
+         text-xs font-bold text-emerald-700;
+}
+
+.badge-danger {
+  @apply inline-flex items-center rounded-full 
+         bg-red-100 px-2.5 sm:px-4 py-1 sm:py-1.5 
+         text-xs font-bold text-red-700;
+}
+
+.badge-primary {
+  @apply inline-flex items-center rounded-full 
+         bg-blue-100 px-2.5 sm:px-4 py-1 sm:py-1.5 
+         text-xs font-bold text-blue-700;
+}
+
+/* =========================
+   UTILITY IMPROVEMENTS
+========================= */
+.shadow-soft {
+  @apply shadow-lg shadow-slate-200/50;
+}
+
+.divider {
+  @apply border-t border-slate-200 my-4;
+}
+
+.brand-name {
+  @apply font-black tracking-tight text-slate-950;
+  letter-spacing: -0.04em;
+}
+
+.brand-gradient {
+  @apply font-black tracking-tight bg-gradient-to-l from-blue-600 to-emerald-500 bg-clip-text text-transparent;
+  letter-spacing: -0.04em;
+}
+
+/* =========================
+   MOBILE SECTION CARD
+========================= */
+.section-card {
+  @apply overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white 
+         shadow-lg sm:shadow-xl shadow-slate-200/70 p-4 sm:p-8 md:p-10;
+}
+
+/* =========================
+   PAGE WRAPPER
+========================= */
+.page-wrapper {
+  @apply relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900;
+}
+@media print {
+  #invoice-card {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
+  #invoice-card img {
+    image-rendering: crisp-edges;
+    -webkit-print-color-adjust: exact;
+  }
+}
