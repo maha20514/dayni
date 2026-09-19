@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 48 48" className="h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg">
@@ -14,16 +15,20 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const OrDivider = () => (
-  <div className="flex items-center gap-3 sm:gap-4">
-    <div className="h-px flex-1 bg-slate-200" />
-    <span className="text-xs font-bold text-slate-400 tracking-widest">أو</span>
-    <div className="h-px flex-1 bg-slate-200" />
-  </div>
-);
+function OrDivider() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-3 sm:gap-4">
+      <div className="h-px flex-1 bg-slate-200" />
+      <span className="text-xs font-bold text-slate-400 tracking-widest">{t("login.or")}</span>
+      <div className="h-px flex-1 bg-slate-200" />
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t, dir } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,39 +36,39 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-  // جرّب owner أولاً
-  const ownerRes = await signIn("credentials", {
-    redirect: false,
-    email,
-    password,
-  });
+    // جرّب owner أولاً
+    const ownerRes = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
 
-  if (ownerRes?.ok) {
-    router.push("/dashboard");
-    return;
-  }
+    if (ownerRes?.ok) {
+      router.push("/dashboard");
+      return;
+    }
 
-  // لو فشل جرّب team-member
-  const memberRes = await signIn("team-member", {
-    redirect: false,
-    email,
-    password,
-  });
+    // لو فشل جرّب team-member
+    const memberRes = await signIn("team-member", {
+      redirect: false,
+      email,
+      password,
+    });
 
-  setLoading(false);
+    setLoading(false);
 
-  if (memberRes?.ok) {
-    router.push("/dashboard");
-    return;
-  }
+    if (memberRes?.ok) {
+      router.push("/dashboard");
+      return;
+    }
 
-  // كلاهما فشل
-  setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-};
+    // كلاهما فشل
+    setError(t("login.invalidCredentials"));
+  };
 
   const handleGoogle = async () => {
     setGLoading(true);
@@ -71,42 +76,42 @@ export default function LoginPage() {
   };
 
   return (
-    <main dir="rtl" className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-3 py-6 sm:px-6 sm:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-blue-100/70 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-emerald-100/60 blur-3xl" />
+    <main dir={dir} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-3 py-6 sm:px-6 sm:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-blue-100/70 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-emerald-100/60 blur-3xl" />
 
       <section className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-200/80 lg:grid-cols-[0.9fr_1.1fr]">
 
         {/* LEFT PANEL */}
         <div className="relative hidden overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 p-8 lg:p-10 text-white lg:block">
-          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="absolute -end-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-24 -start-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
           <div className="relative flex h-full min-h-[520px] flex-col justify-between">
             <div>
               <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-3xl ring-1 ring-white/20 backdrop-blur">📒</div>
               <h1 className="text-3xl lg:text-4xl font-semibold leading-tight">
-                مرحباً بعودتك إلى{" "}
-                <span className="font-black tracking-tight">دَيني</span>
+                {t("login.heroTitle1")}{" "}
+                <span className="font-black tracking-tight">{t("common.appName")}</span>
               </h1>
               <p className="mt-4 max-w-md text-base leading-relaxed text-blue-100">
-                تابع العملاء، الديون، والمدفوعات من لوحة واحدة واضحة وسهلة الاستخدام.
+                {t("login.heroDesc")}
               </p>
             </div>
             <div className="space-y-4">
               <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20 backdrop-blur">
-                <p className="text-sm font-semibold text-blue-100">إدارة أسهل</p>
-                <p className="mt-2 text-lg font-semibold">كل ديون متجرك في مكان واحد</p>
+                <p className="text-sm font-semibold text-blue-100">{t("login.heroCard1Label")}</p>
+                <p className="mt-2 text-lg font-semibold">{t("login.heroCard1Title")}</p>
               </div>
               <div className="rounded-2xl bg-white p-4 text-slate-900 shadow-2xl">
-                <p className="text-sm font-semibold text-slate-500">ملخص سريع</p>
+                <p className="text-sm font-semibold text-slate-500">{t("login.heroCard2Label")}</p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-red-50 p-3">
-                    <p className="text-xs font-bold text-red-600">الديون</p>
-                    <p className="mt-1 text-lg font-black text-red-700">4,250 ر.س</p>
+                    <p className="text-xs font-bold text-red-600">{t("login.heroDebt")}</p>
+                    <p className="mt-1 text-lg font-black text-red-700">4,250</p>
                   </div>
                   <div className="rounded-xl bg-emerald-50 p-3">
-                    <p className="text-xs font-bold text-emerald-600">المدفوع</p>
-                    <p className="mt-1 text-lg font-black text-emerald-700">1,800 ر.س</p>
+                    <p className="text-xs font-bold text-emerald-600">{t("login.heroPaid")}</p>
+                    <p className="mt-1 text-lg font-black text-emerald-700">1,800</p>
                   </div>
                 </div>
               </div>
@@ -118,9 +123,9 @@ export default function LoginPage() {
         <div className="p-5 sm:p-8 lg:p-10">
           <div className="mb-5 sm:mb-8 text-center">
             <div className="mx-auto mb-3 sm:mb-5 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-blue-50 text-3xl sm:text-4xl">🛒</div>
-            <span className="mb-3 sm:mb-4 inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">تسجيل الدخول</span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-950">مرحباً بعودتك</h2>
-            <p className="mt-2 text-xs sm:text-sm text-slate-600">سجّل الدخول لإدارة متجرك ومتابعة العملاء</p>
+            <span className="mb-3 sm:mb-4 inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">{t("login.badge")}</span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-950">{t("login.title")}</h2>
+            <p className="mt-2 text-xs sm:text-sm text-slate-600">{t("login.subtitle")}</p>
           </div>
 
           {/* Google button */}
@@ -133,32 +138,34 @@ export default function LoginPage() {
             {gLoading ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
             ) : <GoogleIcon />}
-            <span>تسجيل الدخول بواسطة Google</span>
+            <span>{t("login.googleButton")}</span>
           </button>
 
           <OrDivider />
 
           <form onSubmit={handleLogin} className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
             <div>
-              <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">البريد الإلكتروني</label>
+              <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("login.email")}</label>
               <input
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
                 className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                 placeholder="example@shop.com"
+                dir="ltr"
               />
             </div>
 
             <div>
               <div className="mb-1.5 sm:mb-2 flex items-center justify-between">
-                <label className="text-xs sm:text-sm font-bold text-slate-600">كلمة المرور</label>
+                <label className="text-xs sm:text-sm font-bold text-slate-600">{t("login.password")}</label>
                 <Link href="/settings/forgot-password" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition">
-                  نسيت كلمة المرور؟
+                  {t("login.forgotPassword")}
                 </Link>
               </div>
               <input
                 type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                 className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                 placeholder="••••••••"
+                dir="ltr"
               />
             </div>
 
@@ -174,23 +181,23 @@ export default function LoginPage() {
             >
               {loading ? (
                 <>
-                  <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  جاري تسجيل الدخول...
+                  <span className="me-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {t("login.submitting")}
                 </>
               ) : (
-                <>تسجيل الدخول <span className="mr-2">←</span></>
+                <>{t("login.submit")} <span className="ms-2">←</span></>
               )}
             </button>
           </form>
 
           <div className="mt-5 sm:mt-8 rounded-2xl sm:rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-5 text-center">
             <p className="text-xs sm:text-sm text-slate-600">
-              ليس لديك حساب؟{" "}
-              <Link href="/register" className="font-bold text-blue-600 transition hover:text-blue-700">إنشاء حساب جديد</Link>
+              {t("login.noAccount")}{" "}
+              <Link href="/register" className="font-bold text-blue-600 transition hover:text-blue-700">{t("login.createAccount")}</Link>
             </p>
           </div>
 
-          <p className="mt-4 sm:mt-6 text-center text-xs font-semibold text-slate-400">© 2026 دَيني - نظام إدارة الديون الذكي</p>
+          <p className="mt-4 sm:mt-6 text-center text-xs font-semibold text-slate-400">{t("login.copyright")}</p>
         </div>
       </section>
     </main>

@@ -11,6 +11,7 @@ import {
 } from "chart.js";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -28,23 +29,24 @@ type Transaction = {
   date: string;
 };
 
-const statCards = [
-  { key: "totalDebt", title: "إجمالي الديون", icon: "💰", color: "red" },
-  { key: "thisMonthDebt", title: "ديون هذا الشهر", icon: "📅", color: "amber" },
-  { key: "totalCustomers", title: "عدد العملاء", icon: "👥", color: "blue" },
-  { key: "totalPayments", title: "المدفوعات", icon: "✅", color: "emerald" },
-] as const;
-
-const colorMap = {
-  red:     { bg: "bg-red-50",     text: "text-red-700",     icon: "bg-red-100",     ring: "group-hover:ring-red-100" },
-  amber:   { bg: "bg-amber-50",   text: "text-amber-700",   icon: "bg-amber-100",   ring: "group-hover:ring-amber-100" },
-  blue:    { bg: "bg-blue-50",    text: "text-blue-700",    icon: "bg-blue-100",    ring: "group-hover:ring-blue-100" },
-  emerald: { bg: "bg-emerald-50", text: "text-emerald-700", icon: "bg-emerald-100", ring: "group-hover:ring-emerald-100" },
-};
-
 export default function Dashboard() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, dir, locale } = useTranslation();
+
+  const statCards = [
+    { key: "totalDebt", title: t("dashboard.totalDebt"), icon: "💰", color: "red" },
+    { key: "thisMonthDebt", title: t("dashboard.monthDebt"), icon: "📅", color: "amber" },
+    { key: "totalCustomers", title: t("dashboard.totalCustomers"), icon: "👥", color: "blue" },
+    { key: "totalPayments", title: t("dashboard.totalPayments"), icon: "✅", color: "emerald" },
+  ] as const;
+
+  const colorMap = {
+    red:     { bg: "bg-red-50",     text: "text-red-700",     icon: "bg-red-100",     ring: "group-hover:ring-red-100" },
+    amber:   { bg: "bg-amber-50",   text: "text-amber-700",   icon: "bg-amber-100",   ring: "group-hover:ring-amber-100" },
+    blue:    { bg: "bg-blue-50",    text: "text-blue-700",    icon: "bg-blue-100",    ring: "group-hover:ring-blue-100" },
+    emerald: { bg: "bg-emerald-50", text: "text-emerald-700", icon: "bg-emerald-100", ring: "group-hover:ring-emerald-100" },
+  };
 
   const [stats, setStats] = useState<Stats>({ totalCustomers: 0, totalDebt: 0, thisMonthDebt: 0, totalPayments: 0 });
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
@@ -53,12 +55,7 @@ export default function Dashboard() {
   const [monthLabels, setMonthLabels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [collectionRate, setCollectionRate] = useState(0);
-
-  
-const [supplierStats, setSupplierStats] = useState({ total: 0, totalDebt: 0 });
- 
-// 2️⃣ في fetchDashboardData أضف جلب الموردين:
-
+  const [supplierStats, setSupplierStats] = useState({ total: 0, totalDebt: 0 });
 
   const fetchDashboardData = async (userId: string) => {
     try {
@@ -98,8 +95,9 @@ const [supplierStats, setSupplierStats] = useState({ total: 0, totalDebt: 0 });
       const payMonthly: number[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = new Date();
+        d.setDate(1); // pin to day 1 first — otherwise setMonth() on day 29-31 can roll into the wrong month for shorter months
         d.setMonth(d.getMonth() - i);
-        labels.push(d.toLocaleDateString("ar-SA", { month: "short" }));
+        labels.push(d.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", { month: "short" }));
         const mI = myInvs.filter((x: any) => { const xd = new Date(x.date); return xd.getMonth() === d.getMonth() && xd.getFullYear() === d.getFullYear(); }).reduce((s: number, x: any) => s + Number(x.amount || 0), 0);
         const mP = myPays.filter((x: any) => { const xd = new Date(x.date); return xd.getMonth() === d.getMonth() && xd.getFullYear() === d.getFullYear(); }).reduce((s: number, x: any) => s + Number(x.amount || 0), 0);
         invMonthly.push(mI);
@@ -113,7 +111,7 @@ const [supplierStats, setSupplierStats] = useState({ total: 0, totalDebt: 0 });
         .sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())
         .slice(0, 5)
         .map((c: any) => ({
-          name: c.name || "عميل",
+          name: c.name || "—",
           amount: Number(c.totalDebt || 0),
           type: Number(c.totalDebt || 0) > 0 ? "دين" : "دفع",
           date: c.updatedAt || c.createdAt || new Date().toISOString(),
@@ -122,33 +120,31 @@ const [supplierStats, setSupplierStats] = useState({ total: 0, totalDebt: 0 });
       setStats({ totalCustomers: mine.length, totalDebt, thisMonthDebt, totalPayments: totalPaid });
       setRecentTransactions(recent);
 
-
       const suppliersRes = await fetch("/api/suppliers", { credentials: "include", cache: "no-store" });
-if (suppliersRes.ok) {
-  const suppliers = await suppliersRes.json();
-  if (Array.isArray(suppliers)) {
-    const totalDebt = suppliers.reduce((s: number, sup: any) => s + Number(sup.totalDebt || 0), 0);
-    setSupplierStats({ total: suppliers.length, totalDebt });
-  }
-}
- 
+      if (suppliersRes.ok) {
+        const suppliers = await suppliersRes.json();
+        if (Array.isArray(suppliers)) {
+          const sTotalDebt = suppliers.reduce((s: number, sup: any) => s + Number(sup.totalDebt || 0), 0);
+          setSupplierStats({ total: suppliers.length, totalDebt: sTotalDebt });
+        }
+      }
+
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") { router.push("/login"); return; }
     if (session?.user?.id) fetchDashboardData(session.user.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session]);
 
-  
-
-  const fmt = (v: number) => v.toLocaleString("ar-SA");
-  const fmtM = (v: number) => `${fmt(v)} ريال`;
+  const fmt = (v: number) => formatNumber(v, locale);
+  const fmtM = (v: number) => `${fmt(v)} ${t("dashboard.riyal")}`;
 
   const getStatValue = (key: keyof Stats) =>
     key === "totalCustomers" ? fmt(stats[key]) : fmtM(stats[key]);
@@ -157,7 +153,7 @@ if (suppliersRes.ok) {
     labels: monthLabels,
     datasets: [
       {
-        label: "الديون الجديدة",
+        label: t("dashboard.newDebts"),
         data: monthlyInvoices,
         borderColor: "#dc2626",
         backgroundColor: "rgba(220,38,38,0.07)",
@@ -165,7 +161,7 @@ if (suppliersRes.ok) {
         pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: "#dc2626",
       },
       {
-        label: "المدفوعات",
+        label: t("dashboard.payments"),
         data: monthlyPayments,
         borderColor: "#16a34a",
         backgroundColor: "rgba(22,163,74,0.07)",
@@ -175,69 +171,71 @@ if (suppliersRes.ok) {
     ],
   };
 
+  const fontFamily = locale === "ar" ? "Noto Sans Arabic" : "Plus Jakarta Sans";
+
   const chartOptions = {
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: "index" as const, intersect: false },
     plugins: {
       legend: {
-        position: "bottom" as const, rtl: true,
-        labels: { usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 12, font: { family: "Noto Sans Arabic", size: 11, weight: "bold" as const } },
+        position: "bottom" as const, rtl: dir === "rtl",
+        labels: { usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 12, font: { family: fontFamily, size: 11, weight: "bold" as const } },
       },
       tooltip: {
-        rtl: true, backgroundColor: "#0f172a", padding: 10, cornerRadius: 10,
+        rtl: dir === "rtl", backgroundColor: "#0f172a", padding: 10, cornerRadius: 10,
         callbacks: { label: (ctx: any) => ` ${ctx.dataset.label}: ${fmtM(Number(ctx.raw))}` },
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { family: "Noto Sans Arabic", size: 10 } } },
+      x: { grid: { display: false }, ticks: { font: { family: fontFamily, size: 10 } } },
       y: {
         beginAtZero: true, grid: { color: "#f1f5f9" },
-        ticks: { font: { family: "Noto Sans Arabic", size: 10 }, callback: (v: any) => fmt(Number(v)) },
+        ticks: { font: { family: fontFamily, size: 10 }, callback: (v: any) => fmt(Number(v)) },
       },
     },
   };
 
   if (status === "loading" || loading) {
     return (
-      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main dir={dir} className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
           <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-          <p className="text-base font-bold text-slate-800">جاري تحميل لوحة التحكم...</p>
-          <p className="mt-1 text-xs text-slate-500">يتم تجهيز بيانات متجرك</p>
+          <p className="text-base font-bold text-slate-800">{t("dashboard.loadingTitle")}</p>
+          <p className="mt-1 text-xs text-slate-500">{t("dashboard.loadingDesc")}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main dir="rtl" className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-72 w-72 rounded-full bg-emerald-100/50 blur-3xl" />
+    <main dir={dir} className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-72 w-72 rounded-full bg-emerald-100/50 blur-3xl" />
 
       <div className="container relative z-10 mx-auto max-w-7xl px-3 sm:px-6">
 
         {/* HEADER */}
         <section className="mb-5 sm:mb-10 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="relative p-4 sm:p-8 md:p-10">
-            <div className="absolute left-0 top-0 h-20 w-20 sm:h-32 sm:w-32 rounded-br-[2rem] sm:rounded-br-[4rem] bg-blue-50" />
-            <div className="absolute bottom-0 right-0 h-20 w-20 sm:h-32 sm:w-32 rounded-tl-[2rem] sm:rounded-tl-[4rem] bg-emerald-50" />
+            <div className="absolute start-0 top-0 h-20 w-20 sm:h-32 sm:w-32 rounded-ee-[2rem] sm:rounded-ee-[4rem] bg-blue-50" />
+            <div className="absolute bottom-0 end-0 h-20 w-20 sm:h-32 sm:w-32 rounded-ss-[2rem] sm:rounded-ss-[4rem] bg-emerald-50" />
             <div className="relative flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <span className="mb-2 sm:mb-4 inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">
-                  لوحة التحكم
+                  {t("dashboard.badge")}
                 </span>
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight text-slate-950">
-                  مرحباً بعودتك 👋
+                  {t("dashboard.welcome")}
                 </h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg leading-relaxed text-slate-600">
-                  إليك نظرة واضحة على العملاء، الديون، والمدفوعات.
+                  {t("dashboard.subtitle")}
                 </p>
               </div>
               <Link
                 href="/customers/new"
                 className="inline-flex items-center justify-center rounded-xl sm:rounded-2xl bg-blue-600 px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-bold text-white shadow-lg sm:shadow-xl shadow-blue-500/25 transition-all hover:-translate-y-1 hover:bg-blue-700"
               >
-                إضافة عميل <span className="mr-1 sm:mr-2 text-base sm:text-xl">+</span>
+                {t("dashboard.addCustomer")} <span className="ms-1 sm:ms-2 text-base sm:text-xl">+</span>
               </Link>
             </div>
           </div>
@@ -268,8 +266,8 @@ if (suppliersRes.ok) {
         <section className="mb-5 sm:mb-8 rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="text-base sm:text-xl font-bold text-slate-950">نسبة التحصيل</h2>
-              <p className="mt-0.5 text-xs sm:text-sm text-slate-500 hidden sm:block">نسبة المبالغ المحصّلة</p>
+              <h2 className="text-base sm:text-xl font-bold text-slate-950">{t("dashboard.collectionRate")}</h2>
+              <p className="mt-0.5 text-xs sm:text-sm text-slate-500 hidden sm:block">{t("dashboard.collectionRateDesc")}</p>
             </div>
             <span className={`text-2xl sm:text-3xl font-black ${collectionRate >= 70 ? "text-emerald-600" : collectionRate >= 40 ? "text-amber-600" : "text-red-600"}`}>
               {collectionRate}%
@@ -282,8 +280,8 @@ if (suppliersRes.ok) {
             />
           </div>
           <div className="mt-2 flex justify-between text-xs font-semibold text-slate-400">
-            <span>المدفوع: {fmtM(stats.totalPayments)}</span>
-            <span>المتبقي: {fmtM(stats.totalDebt - stats.totalPayments)}</span>
+            <span>{t("dashboard.paidLabel")}: {fmtM(stats.totalPayments)}</span>
+            <span>{t("dashboard.remainingLabel")}: {fmtM(stats.totalDebt - stats.totalPayments)}</span>
           </div>
         </section>
 
@@ -294,36 +292,36 @@ if (suppliersRes.ok) {
           <div className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 shadow-lg sm:shadow-xl shadow-slate-200/70 lg:col-span-3">
             <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold text-slate-950">آخر العمليات</h2>
-                <p className="mt-0.5 text-xs sm:text-sm font-medium text-slate-500 hidden sm:block">أحدث تحديثات العملاء</p>
+                <h2 className="text-lg sm:text-2xl font-bold text-slate-950">{t("dashboard.recentTransactions")}</h2>
+                <p className="mt-0.5 text-xs sm:text-sm font-medium text-slate-500 hidden sm:block">{t("dashboard.recentTransactionsDesc")}</p>
               </div>
               <Link href="/customers" className="rounded-lg sm:rounded-xl bg-blue-50 px-3 py-1.5 text-xs sm:text-sm font-bold text-blue-700 transition hover:bg-blue-100 whitespace-nowrap">
-                عرض الكل
+                {t("dashboard.viewAll")}
               </Link>
             </div>
 
             <div className="space-y-2 sm:space-y-3">
               {recentTransactions.length > 0 ? (
-                recentTransactions.map((t) => (
-                  <div key={`${t.name}-${t.date}`} className="flex items-center justify-between gap-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:p-4 transition hover:border-blue-100 hover:bg-blue-50/40">
+                recentTransactions.map((tItem) => (
+                  <div key={`${tItem.name}-${tItem.date}`} className="flex items-center justify-between gap-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:p-4 transition hover:border-blue-100 hover:bg-blue-50/40">
                     <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                      <div className={`flex h-9 w-9 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-2xl ${t.type === "دين" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}>
-                        {t.type === "دين" ? "📄" : "💵"}
+                      <div className={`flex h-9 w-9 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-2xl ${tItem.type === "دين" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}>
+                        {tItem.type === "دين" ? "📄" : "💵"}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-base font-bold text-slate-900 truncate">{t.name}</p>
+                        <p className="text-xs sm:text-base font-bold text-slate-900 truncate">{tItem.name}</p>
                         <p className="mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">
-                          {new Date(t.date).toLocaleDateString("ar-SA")}
+                          {new Date(tItem.date).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US")}
                         </p>
                       </div>
                     </div>
-                    <div className="text-left shrink-0">
-                      <p className={`text-sm sm:text-lg font-black ${t.type === "دين" ? "text-red-600" : "text-emerald-600"}`}>
-                        {t.amount.toLocaleString("ar-SA")}
-                        <span className="text-[10px] sm:text-xs font-bold"> ريال</span>
+                    <div className="text-end shrink-0">
+                      <p className={`text-sm sm:text-lg font-black ${tItem.type === "دين" ? "text-red-600" : "text-emerald-600"}`}>
+                        {fmt(tItem.amount)}
+                        <span className="text-[10px] sm:text-xs font-bold"> {t("dashboard.riyal")}</span>
                       </p>
-                      <span className={`mt-0.5 inline-flex rounded-full px-1.5 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-bold ${t.type === "دين" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
-                        {t.type}
+                      <span className={`mt-0.5 inline-flex rounded-full px-1.5 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-bold ${tItem.type === "دين" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {tItem.type === "دين" ? t("dashboard.debtType") : t("dashboard.paidType")}
                       </span>
                     </div>
                   </div>
@@ -331,7 +329,7 @@ if (suppliersRes.ok) {
               ) : (
                 <div className="rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 sm:py-12 text-center">
                   <div className="mb-3 text-3xl sm:text-5xl">📭</div>
-                  <p className="text-sm font-bold text-slate-700">لا توجد عمليات حديثة</p>
+                  <p className="text-sm font-bold text-slate-700">{t("dashboard.noRecentTransactions")}</p>
                 </div>
               )}
             </div>
@@ -341,11 +339,11 @@ if (suppliersRes.ok) {
           <div className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 shadow-lg sm:shadow-xl shadow-slate-200/70 lg:col-span-4">
             <div className="mb-4 sm:mb-6 flex flex-col gap-2 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold text-slate-950">تطور الديون والمدفوعات</h2>
-                <p className="mt-0.5 text-xs sm:text-sm font-medium text-slate-500 hidden sm:block">آخر 6 أشهر</p>
+                <h2 className="text-lg sm:text-2xl font-bold text-slate-950">{t("dashboard.debtChart")}</h2>
+                <p className="mt-0.5 text-xs sm:text-sm font-medium text-slate-500 hidden sm:block">{t("dashboard.last6Months")}</p>
               </div>
               <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-600">
-                6 أشهر
+                {t("dashboard.sixMonths")}
               </span>
             </div>
             <div className="h-52 sm:h-80 md:h-96">
@@ -358,9 +356,9 @@ if (suppliersRes.ok) {
         {/* QUICK ACTIONS */}
         <section className="mt-5 sm:mt-8 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
           {[
-            { href: "/customers", icon: "👥", label: "إدارة العملاء", desc: "عرض وإدارة العملاء", color: "blue" },
-            { href: "/reports", icon: "📊", label: "التقارير", desc: "تقارير وإحصائيات", color: "violet" },
-            { href: "/pricing", icon: "✨", label: "ترقية الباقة", desc: "احصل على ميزات أكثر", color: "emerald" },
+            { href: "/customers", icon: "👥", label: t("dashboard.manageCustomers"), desc: t("dashboard.manageCustomersDesc"), color: "blue" },
+            { href: "/reports", icon: "📊", label: t("dashboard.reports"), desc: t("dashboard.reportsDesc"), color: "violet" },
+            { href: "/pricing", icon: "✨", label: t("dashboard.upgradePlan"), desc: t("dashboard.upgradePlanDesc"), color: "emerald" },
           ].map((a) => (
             <Link
               key={a.href}
@@ -376,37 +374,37 @@ if (suppliersRes.ok) {
                 <p className="font-bold text-slate-900 text-sm sm:text-base">{a.label}</p>
                 <p className="mt-0.5 text-xs text-slate-500">{a.desc}</p>
               </div>
-              <span className="text-slate-300 transition group-hover:translate-x-[-4px] group-hover:text-blue-500 text-sm">←</span>
+              <span className="text-slate-300 transition group-hover:-translate-x-1 rtl:group-hover:translate-x-1 group-hover:text-blue-500 text-sm">←</span>
             </Link>
           ))}
         </section>
 
         {supplierStats.totalDebt > 0 && (
-  <section className="mt-5 sm:mt-8 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-amber-200 bg-amber-50 shadow-sm">
-    <div className="p-4 sm:p-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-amber-100 text-xl sm:text-3xl">
-            🏭
-          </div>
-          <div>
-            <p className="text-xs sm:text-sm font-bold text-amber-700">ديون على المتجر للموردين</p>
-            <h3 className="text-lg sm:text-2xl font-black text-amber-900">
-              {supplierStats.totalDebt.toLocaleString("ar-SA")} ريال
-            </h3>
-            <p className="text-xs text-amber-600">{supplierStats.total} مورد</p>
-          </div>
-        </div>
-        <Link
-          href="/suppliers"
-          className="shrink-0 rounded-xl sm:rounded-2xl bg-amber-500 px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-amber-600"
-        >
-          إدارة الموردين ←
-        </Link>
-      </div>
-    </div>
-  </section>
-)}
+          <section className="mt-5 sm:mt-8 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-amber-200 bg-amber-50 shadow-sm">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-amber-100 text-xl sm:text-3xl">
+                    🏭
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-bold text-amber-700">{t("dashboard.supplierDebtTitle")}</p>
+                    <h3 className="text-lg sm:text-2xl font-black text-amber-900">
+                      {fmtM(supplierStats.totalDebt)}
+                    </h3>
+                    <p className="text-xs text-amber-600">{fmt(supplierStats.total)} {t("dashboard.supplierDebtCount")}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/suppliers"
+                  className="shrink-0 rounded-xl sm:rounded-2xl bg-amber-500 px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-amber-600"
+                >
+                  {t("dashboard.manageSuppliers")}
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
 
       </div>
     </main>

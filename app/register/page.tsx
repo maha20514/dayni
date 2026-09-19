@@ -4,44 +4,51 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { useTranslation, translateApiError } from "@/lib/i18n/LanguageContext";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
-function validateEmail(email: string): string {
-  if (!email.trim()) return "البريد الإلكتروني مطلوب";
-  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(email.trim())) return "صيغة البريد الإلكتروني غير صحيحة";
-  if (email.includes("..")) return "البريد يحتوي على نقاط متتالية";
-  return "";
-}
+function useValidators() {
+  const { t } = useTranslation();
 
-function validatePassword(password: string): {
-  error: string;
-  strength: "weak" | "medium" | "strong" | "";
-  hints: string[];
-} {
-  if (!password) return { error: "كلمة المرور مطلوبة", strength: "", hints: [] };
+  function validateEmail(email: string): string {
+    if (!email.trim()) return t("register.emailRequired");
+    const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email.trim())) return t("register.emailInvalid");
+    if (email.includes("..")) return t("register.emailDots");
+    return "";
+  }
 
-  const hints: string[] = [];
-  if (password.length < 8)             hints.push("8 أحرف على الأقل");
-  if (!/[A-Z]/.test(password))         hints.push("حرف كبير واحد على الأقل");
-  if (!/[a-z]/.test(password))         hints.push("حرف صغير واحد على الأقل");
-  if (!/[0-9]/.test(password))         hints.push("رقم واحد على الأقل");
-  if (!/[^A-Za-z0-9]/.test(password)) hints.push("رمز خاص مثل @، #، $");
+  function validatePassword(password: string): {
+    error: string;
+    strength: "weak" | "medium" | "strong" | "";
+    hints: string[];
+  } {
+    if (!password) return { error: t("register.passwordRequired"), strength: "", hints: [] };
 
-  if (password.length < 6)
-    return { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", strength: "weak", hints };
+    const hints: string[] = [];
+    if (password.length < 8)             hints.push(t("register.hint8chars"));
+    if (!/[A-Z]/.test(password))         hints.push(t("register.hintUpper"));
+    if (!/[a-z]/.test(password))         hints.push(t("register.hintLower"));
+    if (!/[0-9]/.test(password))         hints.push(t("register.hintNumber"));
+    if (!/[^A-Za-z0-9]/.test(password)) hints.push(t("register.hintSymbol"));
 
-  let score = 0;
-  if (password.length >= 8)            score++;
-  if (password.length >= 12)           score++;
-  if (/[A-Z]/.test(password))          score++;
-  if (/[a-z]/.test(password))          score++;
-  if (/[0-9]/.test(password))          score++;
-  if (/[^A-Za-z0-9]/.test(password))  score++;
+    if (password.length < 6)
+      return { error: t("register.passwordMin"), strength: "weak", hints };
 
-  const strength = score <= 2 ? "weak" : score <= 4 ? "medium" : "strong";
-  return { error: "", strength, hints };
+    let score = 0;
+    if (password.length >= 8)            score++;
+    if (password.length >= 12)           score++;
+    if (/[A-Z]/.test(password))          score++;
+    if (/[a-z]/.test(password))          score++;
+    if (/[0-9]/.test(password))          score++;
+    if (/[^A-Za-z0-9]/.test(password))  score++;
+
+    const strength = score <= 2 ? "weak" : score <= 4 ? "medium" : "strong";
+    return { error: "", strength, hints };
+  }
+
+  return { validateEmail, validatePassword };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -55,27 +62,31 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const OrDivider = () => (
-  <div className="flex items-center gap-3 sm:gap-4">
-    <div className="h-px flex-1 bg-slate-200" />
-    <span className="text-xs font-bold text-slate-400 tracking-widest">أو</span>
-    <div className="h-px flex-1 bg-slate-200" />
-  </div>
-);
+function OrDivider() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-3 sm:gap-4">
+      <div className="h-px flex-1 bg-slate-200" />
+      <span className="text-xs font-bold text-slate-400 tracking-widest">{t("register.or")}</span>
+      <div className="h-px flex-1 bg-slate-200" />
+    </div>
+  );
+}
 
 function PasswordStrengthBar({ strength }: { strength: "weak" | "medium" | "strong" | "" }) {
+  const { t } = useTranslation();
   if (!strength) return null;
   const c = {
-    weak:   { w: "w-1/3",  bg: "bg-red-500",    label: "ضعيفة",  lc: "text-red-600"     },
-    medium: { w: "w-2/3",  bg: "bg-amber-500",  label: "متوسطة", lc: "text-amber-600"   },
-    strong: { w: "w-full", bg: "bg-emerald-500", label: "قوية",   lc: "text-emerald-600" },
+    weak:   { w: "w-1/3",  bg: "bg-red-500",    label: t("register.passwordStrengthWeak"),   lc: "text-red-600"     },
+    medium: { w: "w-2/3",  bg: "bg-amber-500",  label: t("register.passwordStrengthMedium"), lc: "text-amber-600"   },
+    strong: { w: "w-full", bg: "bg-emerald-500", label: t("register.passwordStrengthStrong"), lc: "text-emerald-600" },
   }[strength];
   return (
     <div className="mt-2 space-y-1">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
         <div className={`h-full rounded-full transition-all duration-500 ${c.w} ${c.bg}`} />
       </div>
-      <p className={`text-xs font-bold ${c.lc}`}>قوة كلمة المرور: {c.label}</p>
+      <p className={`text-xs font-bold ${c.lc}`}>{t("register.passwordStrengthLabel")}: {c.label}</p>
     </div>
   );
 }
@@ -84,6 +95,8 @@ function PasswordStrengthBar({ strength }: { strength: "weak" | "medium" | "stro
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t, dir, locale } = useTranslation();
+  const { validateEmail, validatePassword } = useValidators();
 
   const [shopName, setShopName] = useState("");
   const [email,    setEmail]    = useState("");
@@ -92,14 +105,13 @@ export default function RegisterPage() {
   const [gLoading, setGLoading] = useState(false);
   const [error,    setError]    = useState("");
 
-  // تظهر الأخطاء فقط بعد ما يلمس الحقل
   const [touched, setTouched] = useState({
     shopName: false,
     email:    false,
     password: false,
   });
 
-  const shopError     = touched.shopName && !shopName.trim() ? "اسم المتجر مطلوب" : "";
+  const shopError     = touched.shopName && !shopName.trim() ? t("register.shopNameRequired") : "";
   const emailError    = touched.email    ? validateEmail(email)  : "";
   const pwResult      = validatePassword(password);
   const passwordError = touched.password ? pwResult.error        : "";
@@ -112,7 +124,6 @@ export default function RegisterPage() {
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    // force-touch كل الحقول عشان تظهر الأخطاء
     setTouched({ shopName: true, email: true, password: true });
     if (!isFormValid) return;
 
@@ -123,24 +134,22 @@ export default function RegisterPage() {
       const res  = await fetch("/api/auth/register", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ shopName, email, password }),
+        body:    JSON.stringify({ shopName, email, password, preferredLanguage: locale }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "حدث خطأ أثناء التسجيل");
+        setError(translateApiError(t, data.error) || t("register.errorGeneric"));
         return;
       }
 
-       // روح لصفحة التحقق من الإيميل قبل الداشبورد
       const params = new URLSearchParams({
-        userId:   data.userId,
-        
+        userId: data.userId,
       });
       router.push(`/settings/verify-email?${params.toString()}`);
 
     } catch {
-      setError("حدث خطأ في الاتصال بالخادم");
+      setError(t("common.errorConnection"));
     } finally {
       setLoading(false);
     }
@@ -152,36 +161,36 @@ export default function RegisterPage() {
   };
 
   return (
-    <main dir="rtl" className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-3 py-6 sm:px-6 sm:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-blue-100/70 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-emerald-100/60 blur-3xl" />
+    <main dir={dir} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-3 py-6 sm:px-6 sm:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-blue-100/70 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-emerald-100/60 blur-3xl" />
 
       <section className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-200/80 lg:grid-cols-[0.9fr_1.1fr]">
 
         {/* LEFT PANEL */}
         <div className="relative hidden overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 p-8 lg:p-10 text-white lg:block">
-          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="absolute -end-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-24 -start-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
           <div className="relative flex h-full min-h-[580px] flex-col justify-between">
             <div>
               <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-3xl ring-1 ring-white/20 backdrop-blur">📒</div>
               <h1 className="text-3xl lg:text-4xl font-semibold leading-tight">
-                ابدأ متجرك مع{" "}
-                <span className="font-black tracking-tight">دَيني</span>
+                {t("register.heroTitle1")}{" "}
+                <span className="font-black tracking-tight">{t("common.appName")}</span>
               </h1>
               <p className="mt-4 max-w-md text-base lg:text-lg leading-relaxed text-blue-100">
-                أنشئ حسابك خلال دقائق وابدأ بتنظيم العملاء، الديون، والمدفوعات من لوحة واحدة بسيطة.
+                {t("register.heroDesc")}
               </p>
             </div>
             <div className="space-y-4">
               <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20 backdrop-blur">
-                <p className="text-sm font-semibold text-blue-100">مناسب للمحلات</p>
-                <p className="mt-2 text-lg font-semibold">واجهة عربية سهلة وسريعة</p>
+                <p className="text-sm font-semibold text-blue-100">{t("register.heroCard1Label")}</p>
+                <p className="mt-2 text-lg font-semibold">{t("register.heroCard1Title")}</p>
               </div>
               <div className="rounded-2xl bg-white p-4 text-slate-900 shadow-2xl">
-                <p className="text-sm font-semibold text-slate-500">تبدأ مجاناً</p>
+                <p className="text-sm font-semibold text-slate-500">{t("register.heroCard2Label")}</p>
                 <div className="mt-3 space-y-2.5">
-                  {["إدارة حتى 10 عملاء", "تسجيل الديون والمدفوعات", "متابعة الرصيد بسهولة"].map((item) => (
+                  {[t("register.heroF1"), t("register.heroF2"), t("register.heroF3")].map((item) => (
                     <div key={item} className="flex items-center gap-3">
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-700">✓</span>
                       <span className="text-sm font-bold text-slate-700">{item}</span>
@@ -197,9 +206,9 @@ export default function RegisterPage() {
         <div className="p-5 sm:p-8 lg:p-10">
           <div className="mb-5 sm:mb-8 text-center">
             <div className="mx-auto mb-3 sm:mb-5 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-blue-50 text-3xl sm:text-4xl">🛍️</div>
-            <span className="mb-3 sm:mb-4 inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">إنشاء حساب</span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-950">إنشاء متجر جديد</h2>
-            <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-slate-600">ابدأ إدارة ديون متجرك بطريقة واضحة واحترافية</p>
+            <span className="mb-3 sm:mb-4 inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">{t("register.badge")}</span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-950">{t("register.title")}</h2>
+            <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-slate-600">{t("register.subtitle")}</p>
           </div>
 
           {/* Google */}
@@ -212,7 +221,7 @@ export default function RegisterPage() {
             {gLoading
               ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
               : <GoogleIcon />}
-            <span>التسجيل بواسطة Google</span>
+            <span>{t("register.googleButton")}</span>
           </button>
 
           <OrDivider />
@@ -222,15 +231,15 @@ export default function RegisterPage() {
             {/* اسم المتجر */}
             <div>
               <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">
-                اسم المتجر
+                {t("register.shopName")}
               </label>
               <input
                 type="text"
                 value={shopName}
                 onChange={e => setShopName(e.target.value)}
-                onBlur={() => setTouched(t => ({ ...t, shopName: true }))}
+                onBlur={() => setTouched(t2 => ({ ...t2, shopName: true }))}
                 required
-                placeholder="مثال: بقالة الحي"
+                placeholder={t("register.shopNamePlaceholder")}
                 className={`w-full rounded-xl sm:rounded-2xl border bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:bg-white focus:ring-4
                   ${shopError
                     ? "border-red-400 focus:border-red-400 focus:ring-red-100"
@@ -249,16 +258,17 @@ export default function RegisterPage() {
             {/* البريد الإلكتروني */}
             <div>
               <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">
-                البريد الإلكتروني
+                {t("register.email")}
               </label>
               <div className="relative">
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                  onBlur={() => setTouched(t2 => ({ ...t2, email: true }))}
                   required
                   placeholder="example@shop.com"
+                  dir="ltr"
                   className={`w-full rounded-xl sm:rounded-2xl border bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:bg-white focus:ring-4
                     ${emailError
                       ? "border-red-400 focus:border-red-400 focus:ring-red-100"
@@ -268,10 +278,10 @@ export default function RegisterPage() {
                     }`}
                 />
                 {touched.email && email && !emailError && (
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 text-sm">✓</span>
+                  <span className="absolute end-4 top-1/2 -translate-y-1/2 text-emerald-500 text-sm">✓</span>
                 )}
                 {emailError && (
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-sm">✕</span>
+                  <span className="absolute end-4 top-1/2 -translate-y-1/2 text-red-500 text-sm">✕</span>
                 )}
               </div>
               {emailError && (
@@ -284,15 +294,16 @@ export default function RegisterPage() {
             {/* كلمة المرور */}
             <div>
               <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">
-                كلمة المرور
+                {t("register.password")}
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                onBlur={() => setTouched(t2 => ({ ...t2, password: true }))}
                 required
                 placeholder="••••••••"
+                dir="ltr"
                 className={`w-full rounded-xl sm:rounded-2xl border bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:bg-white focus:ring-4
                   ${passwordError
                     ? "border-red-400 focus:border-red-400 focus:ring-red-100"
@@ -302,7 +313,6 @@ export default function RegisterPage() {
                   }`}
               />
 
-              {/* strength bar */}
               {password && <PasswordStrengthBar strength={pwResult.strength} />}
 
               {passwordError && (
@@ -311,10 +321,9 @@ export default function RegisterPage() {
                 </p>
               )}
 
-              {/* hints — تظهر فقط بعد blur وبدون error */}
               {touched.password && password && pwResult.hints.length > 0 && !passwordError && (
                 <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-                  <p className="mb-1 text-xs font-bold text-amber-700">لتقوية كلمة المرور:</p>
+                  <p className="mb-1 text-xs font-bold text-amber-700">{t("register.hintsTitle")}</p>
                   <ul className="space-y-0.5">
                     {pwResult.hints.map(h => (
                       <li key={h} className="text-xs text-amber-600">• {h}</li>
@@ -338,26 +347,26 @@ export default function RegisterPage() {
             >
               {loading ? (
                 <>
-                  <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  جاري إنشاء الحساب...
+                  <span className="me-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {t("register.submitting")}
                 </>
               ) : (
-                <>إنشاء حساب جديد <span className="mr-2">←</span></>
+                <>{t("register.submit")} <span className="ms-2">←</span></>
               )}
             </button>
           </form>
 
           <div className="mt-5 sm:mt-8 rounded-2xl sm:rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-5 text-center">
             <p className="text-xs sm:text-sm text-slate-600">
-              لديك حساب بالفعل؟{" "}
+              {t("register.haveAccount")}{" "}
               <Link href="/login" className="font-bold text-blue-600 transition hover:text-blue-700">
-                تسجيل الدخول
+                {t("register.loginLink")}
               </Link>
             </p>
           </div>
 
           <p className="mt-4 sm:mt-6 text-center text-xs font-semibold text-slate-400">
-            © 2026 دَيني - نظام إدارة الديون الذكي
+            {t("register.copyright")}
           </p>
         </div>
       </section>

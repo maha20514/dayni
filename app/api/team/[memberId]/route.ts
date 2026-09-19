@@ -19,7 +19,7 @@ export async function PATCH(
     await connectDB();
     const ownerId = await getOwnerId(req);
     if (!ownerId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { memberId } = await params;
@@ -27,7 +27,7 @@ export async function PATCH(
 
     const member = await TeamMember.findOne({ _id: memberId, ownerId });
     if (!member) {
-      return NextResponse.json({ error: "العضو غير موجود" }, { status: 404 });
+      return NextResponse.json({ error: "MEMBER_NOT_FOUND" }, { status: 404 });
     }
 
     if (role)   member.role   = role;
@@ -37,7 +37,7 @@ export async function PATCH(
     return NextResponse.json({ success: true, member });
   } catch (error: any) {
     console.error("PATCH /api/team/[id] error:", error);
-    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }
 
@@ -50,19 +50,19 @@ export async function DELETE(
     await connectDB();
     const ownerId = await getOwnerId(req);
     if (!ownerId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { memberId } = await params;
 
     const member = await TeamMember.findOneAndDelete({ _id: memberId, ownerId });
     if (!member) {
-      return NextResponse.json({ error: "العضو غير موجود" }, { status: 404 });
+      return NextResponse.json({ error: "MEMBER_NOT_FOUND" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/team/[id] error:", error);
-    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }

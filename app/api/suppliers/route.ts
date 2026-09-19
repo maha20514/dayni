@@ -11,14 +11,13 @@ async function getOwnerIdFromToken(req: NextRequest) {
   return token.userId as string;
 }
 
-// ── GET — جيب الموردين ───────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
 
     const userId = await getOwnerIdFromToken(req);
     if (!userId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const suppliers = await Supplier.find({ userId })
@@ -28,24 +27,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(suppliers);
   } catch (error: any) {
     console.error("GET /api/suppliers error:", error);
-    return NextResponse.json({ error: "خطأ داخلي" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }
 
-// ── POST — أضف مورد جديد ─────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
     const userId = await getOwnerIdFromToken(req);
     if (!userId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { name, phone, company, notes } = await req.json();
 
     if (!name?.trim()) {
-      return NextResponse.json({ error: "اسم المورد مطلوب" }, { status: 400 });
+      return NextResponse.json({ error: "SUPPLIER_NAME_REQUIRED" }, { status: 400 });
     }
 
     const supplier = await Supplier.create({
@@ -59,6 +57,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(supplier, { status: 201 });
   } catch (error: any) {
     console.error("POST /api/suppliers error:", error);
-    return NextResponse.json({ error: "حدث خطأ أثناء الإضافة" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }

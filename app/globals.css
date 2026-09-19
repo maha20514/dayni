@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 /* =========================
@@ -15,6 +16,9 @@
   --danger: #dc2626;
   --danger-dark: #b91c1c;
   --muted: #64748b;
+
+  --font-ar: "Noto Sans Arabic", system-ui, sans-serif;
+  --font-en: "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
 /* =========================
@@ -23,16 +27,29 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Noto Sans Arabic", system-ui, sans-serif;
-  direction: rtl;
+  font-family: var(--font-ar);
   font-weight: 500;
   -webkit-font-smoothing: antialiased;
+}
+
+/* When the page is switched to English/LTR, swap the whole-app font
+   stack to a Latin-friendly typeface. dir is set on <html> by
+   lib/i18n/LanguageContext.tsx, so this cascades everywhere without
+   touching individual components. */
+html[dir="ltr"] body {
+  font-family: var(--font-en);
 }
 
 h1, h2, h3 {
   color: var(--foreground);
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+html[dir="ltr"] h1,
+html[dir="ltr"] h2,
+html[dir="ltr"] h3 {
+  letter-spacing: -0.01em;
 }
 
 /* =========================
@@ -125,7 +142,7 @@ h1, h2, h3 {
 
 .table th,
 .table td {
-  @apply px-3 sm:px-6 py-3 sm:py-5 text-right border-b border-slate-100;
+  @apply px-3 sm:px-6 py-3 sm:py-5 text-start border-b border-slate-100;
 }
 
 .table th {
@@ -189,6 +206,11 @@ h1, h2, h3 {
   letter-spacing: -0.04em;
 }
 
+html[dir="ltr"] .brand-gradient,
+html[dir="ltr"] .brand-name {
+  letter-spacing: -0.02em;
+}
+
 /* =========================
    MOBILE SECTION CARD
 ========================= */
@@ -203,12 +225,23 @@ h1, h2, h3 {
 .page-wrapper {
   @apply relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900;
 }
+
+/* =========================
+   RTL/LTR DECORATIVE MIRRORING
+   Corner blobs and arrows in older markup use physical rounded-tl/br
+   utilities; mirror them automatically when the page flips to LTR so
+   the layout still reads correctly without editing every page.
+========================= */
+html[dir="ltr"] .i18n-mirror {
+  transform: scaleX(-1);
+}
+
 @media print {
   #invoice-card {
     box-shadow: none !important;
     border-radius: 0 !important;
   }
-  
+
   #invoice-card img {
     image-rendering: crisp-edges;
     -webkit-print-color-adjust: exact;

@@ -11,12 +11,14 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale,
   PointElement, LineElement, Title, Tooltip, Legend, Filler,
 } from "chart.js";
+import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 export default function CashflowPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t, dir, locale } = useTranslation();
 
   const [forecast, setForecast] = useState({ next30: 0, next60: 0, next90: 0 });
   const [monthly, setMonthly] = useState<number[]>([]);
@@ -28,6 +30,7 @@ export default function CashflowPage() {
     if (!session?.user?.id) { router.push("/login"); return; }
     if ((session.user as any)?.plan !== "pro") { router.push("/pricing"); return; }
     fetchData(session.user.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session]);
 
   const fetchData = async (userId: string) => {
@@ -56,6 +59,7 @@ export default function CashflowPage() {
 
       const monthlyData = Array.from({ length: 6 }).map((_, i) => {
         const d = new Date();
+        d.setDate(1);
         d.setMonth(d.getMonth() - (5 - i));
         const mInv = myInvs.filter((x: any) => { const xd = new Date(x.date); return xd.getMonth() === d.getMonth() && xd.getFullYear() === d.getFullYear(); });
         const mPay = myPays.filter((x: any) => { const xd = new Date(x.date); return xd.getMonth() === d.getMonth() && xd.getFullYear() === d.getFullYear(); });
@@ -71,19 +75,22 @@ export default function CashflowPage() {
     }
   };
 
-  const fmt  = (v: number) => Math.abs(v).toLocaleString("ar-SA");
-  const fmtM = (v: number) => `${fmt(v)} ريال`;
+  const fmt  = (v: number) => formatNumber(Math.abs(v), locale);
+  const fmtM = (v: number) => `${fmt(v)} ${t("reports.riyal")}`;
 
   const monthLabels = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date();
+    d.setDate(1);
     d.setMonth(d.getMonth() - (5 - i));
-    return d.toLocaleDateString("ar-SA", { month: "short" });
+    return d.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", { month: "short" });
   });
+
+  const fontFamily = locale === "ar" ? "Noto Sans Arabic" : "Plus Jakarta Sans";
 
   const chartData = {
     labels: monthLabels,
     datasets: [{
-      label: "صافي التدفق النقدي",
+      label: t("reportsCashflow.chartTitle"),
       data: monthly,
       borderColor: "#2563eb",
       backgroundColor: "rgba(37,99,235,0.08)",
@@ -99,18 +106,18 @@ export default function CashflowPage() {
     responsive: true, maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: { rtl: true, callbacks: { label: (ctx: any) => ` ${fmtM(Number(ctx.raw))}` } },
+      tooltip: { rtl: dir === "rtl", callbacks: { label: (ctx: any) => ` ${fmtM(Number(ctx.raw))}` } },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { family: "Noto Sans Arabic", size: 10 } } },
-      y: { beginAtZero: true, grid: { color: "#f1f5f9" }, ticks: { font: { family: "Noto Sans Arabic", size: 10 }, callback: (v: any) => fmt(Number(v)) } },
+      x: { grid: { display: false }, ticks: { font: { family: fontFamily, size: 10 } } },
+      y: { beginAtZero: true, grid: { color: "#f1f5f9" }, ticks: { font: { family: fontFamily, size: 10 }, callback: (v: any) => fmt(Number(v)) } },
     },
   };
 
   const forecastCards = [
-    { label: "خلال 30 يوم", value: forecast.next30, icon: "📅", color: "blue" },
-    { label: "خلال 60 يوم", value: forecast.next60, icon: "📆", color: "indigo" },
-    { label: "خلال 90 يوم", value: forecast.next90, icon: "🗓️", color: "violet" },
+    { label: t("reportsCashflow.next30"), value: forecast.next30, icon: "📅", color: "blue" },
+    { label: t("reportsCashflow.next60"), value: forecast.next60, icon: "📆", color: "indigo" },
+    { label: t("reportsCashflow.next90"), value: forecast.next90, icon: "🗓️", color: "violet" },
   ];
 
   const colorMap: any = {
@@ -121,40 +128,40 @@ export default function CashflowPage() {
 
   if (loading || status === "loading") {
     return (
-      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main dir={dir} className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
           <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-          <p className="text-sm font-bold text-slate-800">جاري تحميل التقرير...</p>
+          <p className="text-sm font-bold text-slate-800">{t("reportsCashflow.loadingTitle")}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main dir="rtl" className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-blue-100/60 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-indigo-100/40 blur-3xl" />
+    <main dir={dir} className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-blue-100/60 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-indigo-100/40 blur-3xl" />
 
       <div className="container relative z-10 mx-auto max-w-6xl px-3 sm:px-6">
 
         {/* HEADER */}
         <section className="mb-5 sm:mb-8 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="relative p-4 sm:p-8 md:p-10">
-            <div className="absolute left-0 top-0 h-20 w-20 sm:h-32 sm:w-32 rounded-br-[2rem] sm:rounded-br-[4rem] bg-blue-50" />
-            <div className="absolute bottom-0 right-0 h-20 w-20 sm:h-32 sm:w-32 rounded-tl-[2rem] sm:rounded-tl-[4rem] bg-indigo-50" />
+            <div className="absolute start-0 top-0 h-20 w-20 sm:h-32 sm:w-32 rounded-ee-[2rem] sm:rounded-ee-[4rem] bg-blue-50" />
+            <div className="absolute bottom-0 end-0 h-20 w-20 sm:h-32 sm:w-32 rounded-ss-[2rem] sm:rounded-ss-[4rem] bg-indigo-50" />
             <div className="relative flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="mb-2 sm:mb-4 flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <span className="inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">التقارير المتقدمة</span>
+                  <span className="inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">{t("reports.advancedReportsTitle")}</span>
                   <span className="inline-flex rounded-full bg-purple-100 px-3 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-black text-purple-700">PRO</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight text-slate-950">التدفق النقدي المتوقع</h1>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight text-slate-950">{t("reportsCashflow.title")}</h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg leading-relaxed text-slate-600">
-                  توقع المبالغ المتوقع تحصيلها خلال الفترات القادمة.
+                  {t("reportsCashflow.subtitle")}
                 </p>
               </div>
               <Link href="/reports" className="inline-flex items-center justify-center rounded-xl sm:rounded-2xl bg-blue-600 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-base font-bold text-white shadow-lg sm:shadow-xl shadow-blue-500/25 transition-all hover:-translate-y-1 hover:bg-blue-700 whitespace-nowrap">
-                العودة للتقارير <span className="mr-1 sm:mr-2">←</span>
+                {t("reportsCashflow.backToReports")} <span className="ms-1 sm:ms-2">←</span>
               </Link>
             </div>
           </div>
@@ -164,8 +171,8 @@ export default function CashflowPage() {
         <section className="mb-5 sm:mb-8 rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="mb-3 sm:mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-base sm:text-xl font-bold text-slate-950">معدل التحصيل الشهري</h2>
-              <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 hidden sm:block">بناءً على آخر 30 يوم</p>
+              <h2 className="text-base sm:text-xl font-bold text-slate-950">{t("reportsCashflow.monthlyRateTitle")}</h2>
+              <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 hidden sm:block">{t("reportsCashflow.monthlyRateDesc")}</p>
             </div>
             <span className={`text-2xl sm:text-3xl font-black ${collectionRate >= 70 ? "text-emerald-600" : collectionRate >= 40 ? "text-amber-600" : "text-red-600"}`}>
               {collectionRate}%
@@ -191,7 +198,7 @@ export default function CashflowPage() {
                   {c.value >= 0 ? "" : "−"}{fmtM(c.value)}
                 </h2>
                 <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-slate-400">
-                  {c.value >= 0 ? "📈 صافي إيجابي" : "📉 صافي سلبي"}
+                  {c.value >= 0 ? t("reportsCashflow.positiveNet") : t("reportsCashflow.negativeNet")}
                 </p>
               </div>
             );
@@ -201,8 +208,8 @@ export default function CashflowPage() {
         {/* CHART */}
         <section className="mb-5 sm:mb-8 rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="mb-4 sm:mb-6">
-            <h2 className="text-base sm:text-2xl font-bold text-slate-950">صافي التدفق النقدي الشهري</h2>
-            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 hidden sm:block">الفرق بين الديون والمدفوعات لكل شهر</p>
+            <h2 className="text-base sm:text-2xl font-bold text-slate-950">{t("reportsCashflow.chartTitle")}</h2>
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 hidden sm:block">{t("reportsCashflow.chartDesc")}</p>
           </div>
           <div className="h-48 sm:h-80">
             <Line data={chartData} options={chartOptions} />
@@ -214,9 +221,9 @@ export default function CashflowPage() {
           <div className="flex items-start gap-3 sm:gap-4">
             <span className="text-2xl sm:text-3xl shrink-0">💡</span>
             <div>
-              <p className="text-sm sm:text-base font-bold text-amber-800">ملاحظة حول التوقعات</p>
+              <p className="text-sm sm:text-base font-bold text-amber-800">{t("reportsCashflow.noteTitle")}</p>
               <p className="mt-1 text-xs sm:text-sm leading-relaxed text-amber-700">
-                التوقعات مبنية على متوسط أداء آخر 30 يوم. قد تختلف النتائج الفعلية بناءً على سلوك العملاء وظروف السوق.
+                {t("reportsCashflow.noteDesc")}
               </p>
             </div>
           </div>

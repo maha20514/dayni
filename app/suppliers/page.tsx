@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
 
 interface SupplierType {
   _id:       string;
@@ -22,6 +23,7 @@ type SortType   = "debt-desc" | "name";
 export default function SuppliersPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, dir, locale } = useTranslation();
 
   const [suppliers,   setSuppliers]   = useState<SupplierType[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -30,7 +32,6 @@ export default function SuppliersPage() {
   const [sortBy,      setSortBy]      = useState<SortType>("debt-desc");
   const [showAdd,     setShowAdd]     = useState(false);
 
-  // form
   const [name,    setName]    = useState("");
   const [phone,   setPhone]   = useState("");
   const [company, setCompany] = useState("");
@@ -41,6 +42,7 @@ export default function SuppliersPage() {
     if (status === "loading") return;
     if (!session?.user?.id) { router.replace("/login"); return; }
     fetchSuppliers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session]);
 
   const fetchSuppliers = async () => {
@@ -57,7 +59,7 @@ export default function SuppliersPage() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { toast.error("اسم المورد مطلوب"); return; }
+    if (!name.trim()) { toast.error(t("suppliers.nameRequired")); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/suppliers", {
@@ -67,46 +69,45 @@ export default function SuppliersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("تم إضافة المورد بنجاح");
+      toast.success(t("suppliers.addSuccess"));
       setShowAdd(false);
       setName(""); setPhone(""); setCompany(""); setNotes("");
       fetchSuppliers();
     } catch (err: any) {
-      toast.error(err.message || "فشل الإضافة");
+      toast.error(err.message || t("suppliers.addFailed"));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-  toast(`هل أنت متأكد من حذف "${name}"؟`, {
-    action: {
-      label: "حذف",
-      onClick: async () => {
-        try {
-          const res = await fetch(`/api/suppliers/${id}`, {
-            method: "DELETE",
-          });
+  const handleDelete = async (id: string, supplierName: string) => {
+    toast(t("suppliers.deleteConfirm", { name: supplierName }), {
+      action: {
+        label: t("suppliers.deleteConfirmAction"),
+        onClick: async () => {
+          try {
+            const res = await fetch(`/api/suppliers/${id}`, {
+              method: "DELETE",
+            });
 
-          if (!res.ok) throw new Error();
+            if (!res.ok) throw new Error();
 
-          toast.success("تم حذف المورد");
+            toast.success(t("suppliers.deleteSuccess"));
 
-          setSuppliers((prev) =>
-            prev.filter((s) => s._id !== id)
-          );
-        } catch {
-          toast.error("فشل الحذف");
-        }
+            setSuppliers((prev) =>
+              prev.filter((s) => s._id !== id)
+            );
+          } catch {
+            toast.error(t("suppliers.deleteFailed"));
+          }
+        },
       },
-    },
-
-    cancel: {
-      label: "إلغاء",
-      onClick: () => {},
-    },
-  });
-};
+      cancel: {
+        label: t("suppliers.cancelAction"),
+        onClick: () => {},
+      },
+    });
+  };
 
   const totalDebt = useMemo(() =>
     suppliers.reduce((s, sup) => s + Number(sup.totalDebt || 0), 0), [suppliers]);
@@ -128,46 +129,48 @@ export default function SuppliersPage() {
     return result;
   }, [suppliers, searchTerm, filterType, sortBy]);
 
+  const fmt = (v: number) => formatNumber(v, locale);
+
   if (loading) {
     return (
-      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main dir={dir} className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
           <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-amber-100 border-t-amber-600" />
-          <p className="font-bold text-slate-800">جاري تحميل الموردين...</p>
+          <p className="font-bold text-slate-800">{t("suppliers.loadingTitle")}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main dir="rtl" className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-amber-100/60 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-orange-100/50 blur-3xl" />
+    <main dir={dir} className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-amber-100/60 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-orange-100/50 blur-3xl" />
 
       <div className="container relative z-10 mx-auto max-w-7xl px-3 sm:px-6">
 
         {/* HEADER */}
         <section className="mb-5 sm:mb-8 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="relative p-4 sm:p-8 md:p-10">
-            <div className="absolute left-0 top-0 h-20 w-20 sm:h-32 sm:w-32 rounded-br-[2rem] sm:rounded-br-[4rem] bg-amber-50" />
-            <div className="absolute bottom-0 right-0 h-20 w-20 sm:h-32 sm:w-32 rounded-tl-[2rem] sm:rounded-tl-[4rem] bg-orange-50" />
+            <div className="absolute start-0 top-0 h-20 w-20 sm:h-32 sm:w-32 rounded-ee-[2rem] sm:rounded-ee-[4rem] bg-amber-50" />
+            <div className="absolute bottom-0 end-0 h-20 w-20 sm:h-32 sm:w-32 rounded-ss-[2rem] sm:rounded-ss-[4rem] bg-orange-50" />
             <div className="relative flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <span className="mb-2 sm:mb-4 inline-flex rounded-full bg-amber-50 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-amber-700">
-                  الموردون
+                  {t("suppliers.badge")}
                 </span>
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight text-slate-950">
-                  إدارة الموردين
+                  {t("suppliers.title")}
                 </h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg leading-relaxed text-slate-600">
-                  سجّل ديونك للموردين وتابع مواعيد السداد بسهولة.
+                  {t("suppliers.subtitle")}
                 </p>
               </div>
               <button
                 onClick={() => setShowAdd(true)}
                 className="inline-flex items-center justify-center rounded-xl sm:rounded-2xl bg-amber-500 px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-1 hover:bg-amber-600"
               >
-                إضافة مورد <span className="mr-1 sm:mr-2 text-lg sm:text-xl">+</span>
+                {t("suppliers.addButton")} <span className="ms-1 sm:ms-2 text-lg sm:text-xl">+</span>
               </button>
             </div>
           </div>
@@ -176,9 +179,9 @@ export default function SuppliersPage() {
         {/* STATS */}
         <section className="mb-5 sm:mb-8 grid gap-3 sm:gap-5 grid-cols-3">
           {[
-            { label: "إجمالي الموردين", value: suppliers.length.toLocaleString("ar-SA"),                                    icon: "🏭", color: "amber"  },
-            { label: "إجمالي المستحق",  value: `${totalDebt.toLocaleString("ar-SA")} ريال`,                                 icon: "💸", color: "red"    },
-            { label: "لديهم رصيد",      value: suppliers.filter(s => s.totalDebt > 0).length.toLocaleString("ar-SA"),       icon: "⚠️", color: "orange" },
+            { label: t("suppliers.totalSuppliers"), value: fmt(suppliers.length),                                    icon: "🏭", color: "amber"  },
+            { label: t("suppliers.totalDue"),        value: `${fmt(totalDebt)} ${t("suppliers.riyal")}`,              icon: "💸", color: "red"    },
+            { label: t("suppliers.hasBalance"),      value: fmt(suppliers.filter(s => s.totalDebt > 0).length),       icon: "⚠️", color: "orange" },
           ].map(s => (
             <div key={s.label} className="rounded-xl sm:rounded-[1.75rem] border border-slate-200 bg-white p-3 sm:p-6 shadow-sm">
               <div className={`mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-2xl bg-${s.color}-50`}>
@@ -196,33 +199,33 @@ export default function SuppliersPage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="ابحث بالاسم أو الشركة أو الجوال..."
+                placeholder={t("suppliers.searchPlaceholder")}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 py-3 sm:py-4 pl-10 pr-4 sm:pr-5 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-100"
+                className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 py-3 sm:py-4 ps-10 pe-4 sm:pe-5 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-100"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
             </div>
             <select
               value={filterType}
               onChange={e => setFilterType(e.target.value as FilterType)}
               className="rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-3 sm:px-5 py-3 sm:py-4 text-sm font-bold text-slate-700 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
             >
-              <option value="all">الكل</option>
-              <option value="debt">عليهم رصيد</option>
-              <option value="paid">مسدد</option>
+              <option value="all">{t("suppliers.filterAll")}</option>
+              <option value="debt">{t("suppliers.filterDebt")}</option>
+              <option value="paid">{t("suppliers.filterPaid")}</option>
             </select>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as SortType)}
               className="rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-3 sm:px-5 py-3 sm:py-4 text-sm font-bold text-slate-700 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
             >
-              <option value="debt-desc">الأعلى ديناً</option>
-              <option value="name">أبجدياً</option>
+              <option value="debt-desc">{t("suppliers.sortDebtDesc")}</option>
+              <option value="name">{t("suppliers.sortName")}</option>
             </select>
           </div>
           <p className="mt-2 sm:mt-4 text-xs sm:text-sm font-semibold text-slate-500">
-            عرض {filtered.length} من {suppliers.length} مورد
+            {t("suppliers.showingCount", { shown: fmt(filtered.length), total: fmt(suppliers.length) })}
           </p>
         </section>
 
@@ -235,11 +238,11 @@ export default function SuppliersPage() {
                 <table className="w-full min-w-[600px]">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-right text-xs sm:text-sm font-black text-slate-600">المورد</th>
-                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-right text-xs sm:text-sm font-black text-slate-600">الشركة</th>
-                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-right text-xs sm:text-sm font-black text-slate-600">الجوال</th>
-                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-center text-xs sm:text-sm font-black text-slate-600">الرصيد المستحق</th>
-                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-center text-xs sm:text-sm font-black text-slate-600">إجراءات</th>
+                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-start text-xs sm:text-sm font-black text-slate-600">{t("suppliers.colSupplier")}</th>
+                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-start text-xs sm:text-sm font-black text-slate-600">{t("suppliers.colCompany")}</th>
+                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-start text-xs sm:text-sm font-black text-slate-600">{t("suppliers.colPhone")}</th>
+                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-center text-xs sm:text-sm font-black text-slate-600">{t("suppliers.colBalance")}</th>
+                      <th className="px-4 sm:px-6 py-4 sm:py-5 text-center text-xs sm:text-sm font-black text-slate-600">{t("suppliers.colActions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -256,10 +259,10 @@ export default function SuppliersPage() {
                           </Link>
                         </td>
                         <td className="px-4 sm:px-6 py-4 sm:py-5 text-xs sm:text-sm text-slate-500">{sup.company || "—"}</td>
-                        <td className="px-4 sm:px-6 py-4 sm:py-5 text-xs sm:text-sm text-slate-600">{sup.phone || "—"}</td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5 text-xs sm:text-sm text-slate-600" dir="ltr">{sup.phone || "—"}</td>
                         <td className="px-4 sm:px-6 py-4 sm:py-5 text-center">
                           <span className={`text-sm sm:text-lg font-black ${sup.totalDebt > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                            {Number(sup.totalDebt || 0).toLocaleString("ar-SA")} ريال
+                            {fmt(Number(sup.totalDebt || 0))} {t("suppliers.riyal")}
                           </span>
                         </td>
                         <td className="px-4 sm:px-6 py-4 sm:py-5">
@@ -295,21 +298,21 @@ export default function SuppliersPage() {
                           <p className="text-xs text-slate-500 mt-0.5">{sup.company || sup.phone || "—"}</p>
                         </div>
                       </Link>
-                      <div className="text-left shrink-0">
+                      <div className="text-end shrink-0">
                         <p className={`text-sm font-black ${sup.totalDebt > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                          {Number(sup.totalDebt || 0).toLocaleString("ar-SA")} ريال
+                          {fmt(Number(sup.totalDebt || 0))} {t("suppliers.riyal")}
                         </p>
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-black ${
                           sup.totalDebt > 0 ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
                         }`}>
-                          {sup.totalDebt > 0 ? "مستحق" : "مسدد"}
+                          {sup.totalDebt > 0 ? t("suppliers.statusDue") : t("suppliers.statusPaid")}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-3">
                       <Link href={`/suppliers/${sup._id}`}
                         className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition">
-                        👁️ التفاصيل
+                        👁️ {t("suppliers.details")}
                       </Link>
                       <button
                         onClick={() => handleDelete(sup._id, sup.name)}
@@ -324,13 +327,13 @@ export default function SuppliersPage() {
           ) : (
             <div className="px-4 sm:px-6 py-12 sm:py-20 text-center">
               <div className="mb-3 sm:mb-4 text-4xl sm:text-5xl">🏭</div>
-              <p className="text-base sm:text-lg font-bold text-slate-700">لا يوجد موردون بعد</p>
-              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500">ابدأ بإضافة أول مورد</p>
+              <p className="text-base sm:text-lg font-bold text-slate-700">{t("suppliers.emptyTitle")}</p>
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500">{t("suppliers.emptyDesc")}</p>
               <button
                 onClick={() => setShowAdd(true)}
                 className="mt-4 sm:mt-6 inline-flex rounded-xl sm:rounded-2xl bg-amber-500 px-6 sm:px-8 py-3 sm:py-4 text-sm font-bold text-white transition hover:bg-amber-600"
               >
-                إضافة مورد الآن
+                {t("suppliers.addNow")}
               </button>
             </div>
           )}
@@ -345,39 +348,40 @@ export default function SuppliersPage() {
               <div className="mx-auto mb-3 sm:mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-amber-50 text-3xl sm:text-4xl">
                 🏭
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-950">إضافة مورد جديد</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-950">{t("suppliers.modalTitle")}</h3>
             </div>
 
             <form onSubmit={handleAdd} className="space-y-3 sm:space-y-4">
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">اسم المورد *</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("suppliers.nameLabel")}</label>
                 <input
                   type="text" value={name} onChange={e => setName(e.target.value)} required
-                  placeholder="مثال: أحمد للمواد الغذائية"
+                  placeholder={t("suppliers.namePlaceholder")}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">اسم الشركة</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("suppliers.companyLabel")}</label>
                 <input
                   type="text" value={company} onChange={e => setCompany(e.target.value)}
-                  placeholder="اختياري"
+                  placeholder={t("suppliers.companyPlaceholder")}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">رقم الجوال</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("suppliers.phoneLabel")}</label>
                 <input
                   type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                  placeholder="05XXXXXXXX"
+                  placeholder={t("suppliers.phonePlaceholder")}
+                  dir="ltr"
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">ملاحظات</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("suppliers.notesLabel")}</label>
                 <textarea
                   value={notes} onChange={e => setNotes(e.target.value)}
-                  rows={2} placeholder="اختياري..."
+                  rows={2} placeholder={t("suppliers.notesPlaceholder")}
                   className="w-full resize-none rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-100"
                 />
               </div>
@@ -388,13 +392,13 @@ export default function SuppliersPage() {
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-amber-500 py-3 sm:py-4 text-sm sm:text-base font-bold text-white shadow-lg transition hover:bg-amber-600 disabled:opacity-60"
                 >
                   {saving ? <span className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : "🏭"}
-                  إضافة المورد
+                  {t("suppliers.submit")}
                 </button>
                 <button
                   type="button" onClick={() => setShowAdd(false)}
                   className="rounded-xl sm:rounded-2xl bg-slate-100 px-5 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-bold text-slate-700 transition hover:bg-slate-200"
                 >
-                  إلغاء
+                  {t("suppliers.cancel")}
                 </button>
               </div>
             </form>

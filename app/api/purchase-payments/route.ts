@@ -16,18 +16,18 @@ export async function POST(req: NextRequest) {
 
     const userId = await getUserId(req);
     if (!userId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { supplierId, amount, notes } = await req.json();
 
     if (!supplierId || !amount || amount <= 0) {
-      return NextResponse.json({ error: "البيانات ناقصة" }, { status: 400 });
+      return NextResponse.json({ error: "MISSING_DATA" }, { status: 400 });
     }
 
     const supplier = await Supplier.findOne({ _id: supplierId, userId });
     if (!supplier) {
-      return NextResponse.json({ error: "المورد غير موجود" }, { status: 404 });
+      return NextResponse.json({ error: "SUPPLIER_NOT_FOUND" }, { status: 404 });
     }
 
     const payment = await PurchasePayment.create({
@@ -45,6 +45,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(payment, { status: 201 });
   } catch (error: any) {
     console.error("POST /api/purchase-payments error:", error);
-    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }

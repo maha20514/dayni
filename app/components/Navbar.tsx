@@ -10,6 +10,7 @@ import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { hasFeature } from "@/lib/permissions";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 type PlanType = "free" | "basic" | "pro";
 
@@ -25,10 +26,45 @@ type Notification = {
 
 const hiddenPaths = ["/login", "/register"];
 
+/** Small AR/EN toggle pill, reused in the desktop bar, mobile drawer, and guest bar. */
+function LanguageToggle({ compact = false }: { compact?: boolean }) {
+  const { locale, toggleLocale, t } = useTranslation();
+  const { data: session } = useSession();
+
+  const handleClick = () => {
+    const nextLocale = locale === "ar" ? "en" : "ar";
+    toggleLocale();
+    // Best-effort sync so transactional emails (OTP, password reset, team
+    // invites) go out in whichever language the user last chose — failures
+    // here are non-critical and shouldn't block the UI toggle.
+    if (session?.user?.id) {
+      fetch("/api/users/updateShop", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferredLanguage: nextLocale }),
+      }).catch(() => {});
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title={t("nav.language")}
+      className={`inline-flex items-center justify-center gap-1 rounded-xl sm:rounded-2xl border border-slate-200 bg-white font-bold text-slate-700 transition hover:bg-slate-50 ${
+        compact ? "h-9 w-9 sm:h-10 sm:w-10 text-xs" : "px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm"
+      }`}
+    >
+      {locale === "ar" ? "EN" : "AR"}
+    </button>
+  );
+}
+
 export default function Navbar() {
   const pathname    = usePathname();
   const router      = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { t, locale, dir } = useTranslation();
 
   const [shopName, setShopName] = useState("متجري");
   const [plan,     setPlan]     = useState<PlanType>("free");
@@ -45,11 +81,11 @@ export default function Navbar() {
   const canUseNotifications = hasFeature(plan, "notifications");
 
   const navLinks = [
-    { href: "/dashboard", label: "الرئيسية" },
-    { href: "/customers", label: "العملاء" },
-    { href: "/suppliers",  label: "الموردون" },
-    { href: "/reports",   label: "التقارير" },
-    { href: "/pricing",   label: "الخطط" },
+    { href: "/dashboard", label: t("nav.home") },
+    { href: "/customers", label: t("nav.customers") },
+    { href: "/suppliers", label: t("nav.suppliers") },
+    { href: "/reports",   label: t("nav.reports") },
+    { href: "/pricing",   label: t("nav.plans") },
   ];
 
   useEffect(() => {
@@ -97,25 +133,22 @@ export default function Navbar() {
   if (hiddenPaths.includes(pathname)) return null;
   if (!isLoaded) return null;
 
- const handleLogout = async () => {
-  toast("هل أنت متأكد من تسجيل الخروج؟", {
-    action: {
-      label: "تسجيل الخروج",
-      onClick: async () => {
-        sessionStorage.clear();
-
-        await signOut({ redirect: false });
-
-        router.push("/home");
+  const handleLogout = async () => {
+    toast(t("nav.logoutConfirm"), {
+      action: {
+        label: t("nav.logout"),
+        onClick: async () => {
+          sessionStorage.clear();
+          await signOut({ redirect: false });
+          router.push("/home");
+        },
       },
-    },
-
-    cancel: {
-      label: "إلغاء",
-      onClick: () => {},
-    },
-  });
-};
+      cancel: {
+        label: t("common.cancel"),
+        onClick: () => {},
+      },
+    });
+  };
 
   const goToOwner = () => {
     const isMember = (session?.user as any)?.isMember;
@@ -130,16 +163,19 @@ export default function Navbar() {
   };
 
   const getPlanText = () => {
-    if (plan === "pro")   return "احترافي";
-    if (plan === "basic") return "أساسي";
-    return "مجاني";
+    if (plan === "pro")   return t("nav.planPro");
+    if (plan === "basic") return t("nav.planBasic");
+    return t("nav.planFree");
   };
 
   const isActiveLink = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
   const formatTime = (date: string) =>
-    new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "numeric" }).format(new Date(date));
+    new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+      hour: "numeric",
+      minute: "numeric",
+    }).format(new Date(date));
 
   const markAsRead = async (id: string) => {
     try {
@@ -171,22 +207,23 @@ export default function Navbar() {
   // ════════════════════════════════════════
   if (!isAuthenticated) {
     return (
-      <header dir="rtl" className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
+      <header dir={dir} className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
         <div className="container mx-auto px-4 sm:px-6 lg:px-12">
           <div className="flex min-h-[64px] sm:min-h-[72px] items-center justify-between gap-3">
             <Link href="/home" className="flex items-center gap-2 sm:gap-3">
-              <Image src="/logo.png" alt="دَيني" width={80} height={80} className="h-14 sm:h-16 lg:h-20 w-auto object-contain" priority />
+              <Image src="/logo.png" alt={t("common.appName")} width={80} height={80} className="h-14 sm:h-16 lg:h-20 w-auto object-contain" priority />
               <div>
-                <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-950">دَيني</h1>
-                <p className="-mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">نظام إدارة الديون</p>
+                <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-950">{t("common.appName")}</h1>
+                <p className="-mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">{t("common.tagline")}</p>
               </div>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
+              <LanguageToggle compact />
               <Link href="/login" className="rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-slate-700 transition hover:bg-slate-50">
-                تسجيل الدخول
+                {t("nav.login")}
               </Link>
               <Link href="/register" className="rounded-xl sm:rounded-2xl bg-blue-600 px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:-translate-y-0.5 hover:bg-blue-700">
-                إنشاء حساب
+                {t("nav.register")}
               </Link>
             </div>
           </div>
@@ -199,7 +236,7 @@ export default function Navbar() {
   // AUTH NAVBAR
   // ════════════════════════════════════════
   return (
-    <header dir="rtl" className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
+    <header dir={dir} className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
       <div className="container mx-auto px-3 sm:px-6 lg:px-12">
 
         {/* ── Main row ── */}
@@ -207,69 +244,26 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/dashboard" className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Image src="/icon.png" alt="دَيني" width={60} height={60} className="h-10 sm:h-12 lg:h-14 w-auto object-contain" priority />
+            <Image src="/icon.png" alt={t("common.appName")} width={60} height={60} className="h-10 sm:h-12 lg:h-14 w-auto object-contain" priority />
             <div className="hidden sm:block">
               <h1 className="text-base sm:text-lg lg:text-xl font-black tracking-tight text-slate-950 leading-none">{shopName}</h1>
-              <p className="mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">نظام إدارة الديون</p>
+              <p className="mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">{t("common.tagline")}</p>
               {(session?.user as any)?.isMember && (
-                <span className="mt-0.5 inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-[9px] font-black text-purple-700">عضو فريق</span>
+                <span className="mt-0.5 inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-[9px] font-black text-purple-700">{t("nav.teamMember")}</span>
               )}
             </div>
             <div className="block sm:hidden">
               <h1 className="text-sm font-black tracking-tight text-slate-950 leading-none max-w-[90px] truncate">{shopName}</h1>
               {(session?.user as any)?.isMember && (
-                <span className="mt-0.5 inline-flex rounded-full bg-purple-100 px-1.5 py-0.5 text-[8px] font-black text-purple-700">عضو</span>
+                <span className="mt-0.5 inline-flex rounded-full bg-purple-100 px-1.5 py-0.5 text-[8px] font-black text-purple-700">{t("nav.member")}</span>
               )}
             </div>
           </Link>
 
-          {/* ── Desktop Nav ── */}
-          <nav className="hidden items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 lg:flex print:hidden">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className={`rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${isActiveLink(link.href) ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:bg-white hover:text-blue-700"}`}>
-                {link.label}
-              </Link>
-            ))}
-
-            {/* الفريق */}
-            {!((session?.user as any)?.isMember) && (
-              plan === "pro" ? (
-                <Link href="/team" className={`rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${isActiveLink("/team") ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:bg-white hover:text-blue-700"}`}>
-                  الفريق
-                </Link>
-              ) : (
-                <div className="group relative">
-                  <button disabled className="flex cursor-not-allowed items-center gap-1 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 opacity-60">🔒 الفريق</button>
-                  <div className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 w-48 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-center opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                    <p className="text-xs font-bold text-slate-800">🔒 ميزة احترافية</p>
-                    <p className="mt-1 text-[10px] text-slate-500">الفريق متاح في الباقة الاحترافية</p>
-                    <Link href="/pricing" className="pointer-events-auto mt-2 inline-block rounded-xl bg-blue-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-blue-700">ترقية الباقة</Link>
-                  </div>
-                </div>
-              )
-            )}
-
-            {/* التذكيرات */}
-            {!((session?.user as any)?.isMember) && (
-              plan === "pro" ? (
-                <Link href="/notifications/reminders" className={`rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${isActiveLink("/notifications/reminders") ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:bg-white hover:text-blue-700"}`}>
-                  التذكيرات
-                </Link>
-              ) : (
-                <div className="group relative">
-                  <button disabled className="flex cursor-not-allowed items-center gap-1 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 opacity-60">🔒 التذكيرات</button>
-                  <div className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 w-48 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-center opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                    <p className="text-xs font-bold text-slate-800">🔒 ميزة احترافية</p>
-                    <p className="mt-1 text-[10px] text-slate-500">التذكيرات متاحة في الباقة الاحترافية</p>
-                    <Link href="/pricing" className="pointer-events-auto mt-2 inline-block rounded-xl bg-blue-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-blue-700">ترقية الباقة</Link>
-                  </div>
-                </div>
-              )
-            )}
-          </nav>
-
           {/* ── Desktop Right Controls ── */}
           <div className="hidden items-center gap-2 lg:flex">
+
+            <LanguageToggle />
 
             {/* Notifications */}
             {canUseNotifications ? (
@@ -277,17 +271,17 @@ export default function Navbar() {
                 <button onClick={() => setShowNotifications(prev => !prev)} className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xl transition-all hover:bg-slate-50">
                   🔔
                   {notificationsCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+                    <span className="absolute -end-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
                       {notificationsCount > 9 ? "9+" : notificationsCount}
                     </span>
                   )}
                 </button>
                 {showNotifications && (
-                  <div className="absolute left-1/2 top-[calc(100%+10px)] z-50 w-80 xl:w-96 -translate-x-1/2 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+                  <div className="absolute start-1/2 top-[calc(100%+10px)] z-50 w-80 xl:w-96 -translate-x-1/2 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-center justify-between border-b bg-slate-50 px-4 py-3">
-                      <p className="text-base font-bold text-slate-900">الإشعارات</p>
+                      <p className="text-base font-bold text-slate-900">{t("nav.notificationsTitle")}</p>
                       {notificationsCount > 0 && (
-                        <button onClick={markAllAsRead} className="text-sm font-medium text-blue-600 transition hover:text-blue-700">تحديد الكل كمقروء</button>
+                        <button onClick={markAllAsRead} className="text-sm font-medium text-blue-600 transition hover:text-blue-700">{t("nav.markAllRead")}</button>
                       )}
                     </div>
                     <div className="max-h-[400px] overflow-y-auto">
@@ -308,13 +302,13 @@ export default function Navbar() {
                       )) : (
                         <div className="py-12 text-center">
                           <div className="mb-3 text-4xl">🔔</div>
-                          <p className="text-slate-500 text-sm">لا توجد إشعارات حالياً</p>
+                          <p className="text-slate-500 text-sm">{t("nav.noNotifications")}</p>
                         </div>
                       )}
                     </div>
                     <div className="border-t bg-slate-50 p-3">
                       <button onClick={() => { setShowNotifications(false); router.push("/notifications"); }} className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                        عرض كل الإشعارات
+                        {t("nav.allNotifications")}
                       </button>
                     </div>
                   </div>
@@ -324,52 +318,98 @@ export default function Navbar() {
               <div className="group relative">
                 <button disabled className="relative flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-xl opacity-50">
                   🔔
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-400 text-[9px] font-bold text-white ring-2 ring-white">🔒</span>
+                  <span className="absolute -end-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-400 text-[9px] font-bold text-white ring-2 ring-white">🔒</span>
                 </button>
-                <div className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 w-48 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-center opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                  <p className="text-xs font-bold text-slate-800">🔒 ميزة احترافية</p>
-                  <p className="mt-1 text-[10px] text-slate-500">الإشعارات متاحة في الباقة الاحترافية</p>
-                  <Link href="/pricing" className="pointer-events-auto mt-2 inline-block rounded-xl bg-blue-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-blue-700">ترقية الباقة</Link>
+                <div className="pointer-events-none absolute start-1/2 top-[calc(100%+8px)] z-50 w-48 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-center opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                  <p className="text-xs font-bold text-slate-800">🔒 {t("nav.proFeatureLocked")}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">{t("nav.notificationsLockedDesc")}</p>
+                  <Link href="/pricing" className="pointer-events-auto mt-2 inline-block rounded-xl bg-blue-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-blue-700">{t("nav.upgradePlan")}</Link>
                 </div>
               </div>
             )}
 
             {/* Plan badge */}
             <div className={`rounded-2xl border px-3 py-2 text-xs font-black ${getPlanColor()}`}>
-              الباقة: {getPlanText()}
+              {t("nav.planLabel")}: {getPlanText()}
             </div>
 
             {/* Owner button */}
             <button type="button" onClick={goToOwner} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 transition-all hover:bg-slate-50 hover:shadow-md">
               {avatar ? (
-                <Image src={avatar} alt="المالك" className="h-11 w-11 rounded-xl border border-slate-200 object-cover" width={44} height={44} />
+                <Image src={avatar} alt={t("nav.owner")} className="h-11 w-11 rounded-xl border border-slate-200 object-cover" width={44} height={44} />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-base">👤</div>
               )}
-              <div className="text-right">
-                <p className="text-xs font-black text-slate-900 leading-none">المالك</p>
-                <p className="mt-0.5 text-[10px] font-semibold text-slate-500">مدير المتجر</p>
+              <div className="text-start">
+                <p className="text-xs font-black text-slate-900 leading-none">{t("nav.owner")}</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{t("nav.storeManager")}</p>
               </div>
             </button>
 
             {/* Logout */}
             <button onClick={handleLogout} className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-red-50 px-4 py-2.5 text-sm font-black text-red-600 transition-all hover:bg-red-100 active:scale-95">
-              تسجيل خروج <span className="text-base">↩︎</span>
+              {t("nav.logout")} <span className="text-base">↩︎</span>
             </button>
           </div>
 
-          {/* ── Mobile/Tablet: hamburger only ── */}
-          <div className="flex items-center lg:hidden">
+          {/* ── Mobile/Tablet: language toggle + hamburger ── */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageToggle compact />
             <button
               onClick={() => setIsMobileMenuOpen(prev => !prev)}
               className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl font-black text-slate-900 shadow-sm transition hover:bg-slate-50"
-              aria-label="القائمة"
+              aria-label="Menu"
             >
               {isMobileMenuOpen ? "×" : "☰"}
             </button>
           </div>
 
         </div>
+
+        {/* ── Row 2 (desktop only): navigation links ── */}
+        <nav className="hidden lg:flex items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 mt-1 mb-3 print:hidden">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${isActiveLink(link.href) ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:bg-white hover:text-blue-700"}`}>
+              {link.label}
+            </Link>
+          ))}
+
+          {/* الفريق */}
+          {!((session?.user as any)?.isMember) && (
+            plan === "pro" ? (
+              <Link href="/team" className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${isActiveLink("/team") ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:bg-white hover:text-blue-700"}`}>
+                {t("nav.team")}
+              </Link>
+            ) : (
+              <div className="group relative">
+                <button disabled className="flex cursor-not-allowed items-center gap-1 rounded-xl px-5 py-2.5 text-sm font-bold text-slate-400 opacity-60">🔒 {t("nav.team")}</button>
+                <div className="pointer-events-none absolute start-1/2 top-[calc(100%+8px)] z-50 w-48 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-center opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                  <p className="text-xs font-bold text-slate-800">🔒 {t("nav.proFeatureLocked")}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">{t("nav.teamLockedDesc")}</p>
+                  <Link href="/pricing" className="pointer-events-auto mt-2 inline-block rounded-xl bg-blue-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-blue-700">{t("nav.upgradePlan")}</Link>
+                </div>
+              </div>
+            )
+          )}
+
+          {/* التذكيرات */}
+          {!((session?.user as any)?.isMember) && (
+            plan === "pro" ? (
+              <Link href="/notifications/reminders" className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${isActiveLink("/notifications/reminders") ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:bg-white hover:text-blue-700"}`}>
+                {t("nav.reminders")}
+              </Link>
+            ) : (
+              <div className="group relative">
+                <button disabled className="flex cursor-not-allowed items-center gap-1 rounded-xl px-5 py-2.5 text-sm font-bold text-slate-400 opacity-60">🔒 {t("nav.reminders")}</button>
+                <div className="pointer-events-none absolute start-1/2 top-[calc(100%+8px)] z-50 w-48 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-center opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                  <p className="text-xs font-bold text-slate-800">🔒 {t("nav.proFeatureLocked")}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">{t("nav.remindersLockedDesc")}</p>
+                  <Link href="/pricing" className="pointer-events-auto mt-2 inline-block rounded-xl bg-blue-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-blue-700">{t("nav.upgradePlan")}</Link>
+                </div>
+              </div>
+            )
+          )}
+        </nav>
 
         {/* ════════════════════════════════════
             DRAWER
@@ -381,18 +421,18 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => { setIsMobileMenuOpen(false); goToOwner(); }}
-              className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-right transition hover:bg-slate-100"
+              className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-start transition hover:bg-slate-100"
             >
               {avatar ? (
-                <Image src={avatar} alt="المالك" className="h-10 w-10 rounded-xl border border-slate-200 object-cover shrink-0" width={40} height={40} />
+                <Image src={avatar} alt={t("nav.owner")} className="h-10 w-10 rounded-xl border border-slate-200 object-cover shrink-0" width={40} height={40} />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-lg">👤</div>
               )}
               <div className="flex-1">
                 <p className="text-sm font-black text-slate-900 leading-none">{shopName}</p>
-                <p className="mt-0.5 text-[10px] font-semibold text-slate-500">مدير المتجر</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{t("nav.storeManager")}</p>
                 {(session?.user as any)?.isMember && (
-                  <span className="mt-0.5 inline-flex rounded-full bg-purple-100 px-1.5 py-0.5 text-[8px] font-black text-purple-700">عضو فريق</span>
+                  <span className="mt-0.5 inline-flex rounded-full bg-purple-100 px-1.5 py-0.5 text-[8px] font-black text-purple-700">{t("nav.teamMember")}</span>
                 )}
               </div>
               <div className={`shrink-0 rounded-xl border px-2.5 py-1.5 text-xs font-black ${getPlanColor()}`}>
@@ -402,7 +442,6 @@ export default function Navbar() {
 
             {/* ② Nav links grid — 3 columns */}
             <div className="mb-3 grid grid-cols-3 gap-1.5">
-              {/* الروابط الأساسية */}
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -417,33 +456,30 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* الفريق */}
               {!((session?.user as any)?.isMember) && (
                 plan === "pro" ? (
                   <Link href="/team" className={`rounded-xl py-3 text-center text-xs font-bold transition-all ${isActiveLink("/team") ? "bg-blue-600 text-white shadow-sm" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
-                    الفريق
+                    {t("nav.team")}
                   </Link>
                 ) : (
                   <Link href="/pricing" className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-50 py-3 text-center text-xs font-bold text-slate-400 hover:bg-slate-100">
-                    <span>🔒</span><span>الفريق</span>
+                    <span>🔒</span><span>{t("nav.team")}</span>
                   </Link>
                 )
               )}
 
-              {/* التذكيرات */}
               {!((session?.user as any)?.isMember) && (
                 plan === "pro" ? (
                   <Link href="/notifications/reminders" className={`rounded-xl py-3 text-center text-xs font-bold transition-all ${isActiveLink("/notifications/reminders") ? "bg-blue-600 text-white shadow-sm" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
-                    التذكيرات
+                    {t("nav.reminders")}
                   </Link>
                 ) : (
                   <Link href="/pricing" className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-50 py-3 text-center text-xs font-bold text-slate-400 hover:bg-slate-100">
-                    <span>🔒</span><span>التذكيرات</span>
+                    <span>🔒</span><span>{t("nav.reminders")}</span>
                   </Link>
                 )
               )}
 
-              {/* الإشعارات */}
               {!((session?.user as any)?.isMember) && (
                 plan === "pro" ? (
                   <Link
@@ -454,16 +490,16 @@ export default function Navbar() {
                         : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
-                    الإشعارات
+                    {t("nav.notifications")}
                     {notificationsCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-1 ring-white">
+                      <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-1 ring-white">
                         {notificationsCount > 9 ? "9+" : notificationsCount}
                       </span>
                     )}
                   </Link>
                 ) : (
                   <Link href="/pricing" className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-50 py-3 text-center text-xs font-bold text-slate-400 hover:bg-slate-100">
-                    <span>🔒</span><span>الإشعارات</span>
+                    <span>🔒</span><span>{t("nav.notifications")}</span>
                   </Link>
                 )
               )}
@@ -474,7 +510,7 @@ export default function Navbar() {
               onClick={handleLogout}
               className="w-full rounded-xl bg-red-50 py-3 text-sm font-black text-red-600 transition hover:bg-red-100 active:scale-[0.98]"
             >
-              تسجيل الخروج ↩︎
+              {t("nav.logout")} ↩︎
             </button>
 
           </div>

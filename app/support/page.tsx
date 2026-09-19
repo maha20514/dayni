@@ -7,10 +7,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 export default function SupportPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t, dir } = useTranslation();
 
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -18,9 +20,14 @@ export default function SupportPage() {
   const [sent,    setSent]    = useState(false);
 
   const plan     = (session?.user as any)?.plan     || "free";
-  const shopName = (session?.user as any)?.shopName || "متجري";
+  const shopName = (session?.user as any)?.shopName || t("common.appName");
   const email    = session?.user?.email             || "";
   const isPro    = plan === "pro";
+
+  const commonTopics = [
+    t("support.topic1"), t("support.topic2"), t("support.topic3"),
+    t("support.topic4"), t("support.topic5"), t("support.topic6"),
+  ];
 
   useEffect(() => {
     if (status === "loading") return;
@@ -30,7 +37,7 @@ export default function SupportPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) {
-      toast.error("يرجى ملء جميع الحقول");
+      toast.error(t("support.fillAllFields"));
       return;
     }
     setLoading(true);
@@ -45,7 +52,7 @@ export default function SupportPage() {
       setSubject("");
       setMessage("");
     } catch {
-      toast.error("فشل الإرسال، حاول مرة أخرى");
+      toast.error(t("support.sendFailed"));
     } finally {
       setLoading(false);
     }
@@ -53,48 +60,44 @@ export default function SupportPage() {
 
   if (status === "loading") {
     return (
-      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-slate-50">
+      <main dir={dir} className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
       </main>
     );
   }
 
   return (
-    <main dir="rtl" className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
+    <main dir={dir} className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
       {/* Background blobs */}
-      <div className="absolute right-0 top-20 h-48 w-48 sm:h-72 sm:w-72 rounded-full bg-blue-100/60 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-20 left-0 h-48 w-48 sm:h-72 sm:w-72 rounded-full bg-purple-100/40 blur-3xl pointer-events-none" />
+      <div className="absolute end-0 top-20 h-48 w-48 sm:h-72 sm:w-72 rounded-full bg-blue-100/60 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-20 start-0 h-48 w-48 sm:h-72 sm:w-72 rounded-full bg-purple-100/40 blur-3xl pointer-events-none" />
 
       <div className="container relative z-10 mx-auto max-w-5xl px-4 sm:px-6">
 
         {/* ── HEADER ── */}
         <section className="mb-6 sm:mb-8 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
           <div className="relative p-5 sm:p-8 md:p-10">
-            {/* Decorative corners — hide on xs to avoid overflow */}
-            <div className="absolute left-0 top-0 h-24 w-24 rounded-br-[3rem] bg-blue-50 hidden sm:block" />
-            <div className="absolute bottom-0 right-0 h-24 w-24 rounded-tl-[3rem] bg-purple-50 hidden sm:block" />
+            <div className="absolute start-0 top-0 h-24 w-24 rounded-ee-[3rem] bg-blue-50 hidden sm:block" />
+            <div className="absolute bottom-0 end-0 h-24 w-24 rounded-ss-[3rem] bg-purple-50 hidden sm:block" />
 
             <div className="relative flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1">
-                {/* Badges */}
                 <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2">
                   <span className="inline-flex rounded-full bg-blue-50 px-4 py-1.5 text-xs sm:text-sm font-bold text-blue-700">
-                    الدعم الفني
+                    {t("support.badge")}
                   </span>
                   {isPro && (
                     <span className="inline-flex rounded-full bg-purple-100 px-3 py-1.5 text-xs font-black text-purple-700">
-                      أولوية PRO ✦
+                      {t("support.priorityBadge")}
                     </span>
                   )}
                 </div>
 
                 <h1 className="text-2xl sm:text-4xl md:text-5xl font-semibold leading-tight text-slate-950">
-                  مركز الدعم
+                  {t("support.title")}
                 </h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-lg leading-relaxed text-slate-600">
-                  {isPro
-                    ? "أنت على الباقة الاحترافية — ستحصل على رد خلال ساعات"
-                    : "نحن هنا لمساعدتك في أي وقت"}
+                  {isPro ? t("support.subtitlePro") : t("support.subtitleFree")}
                 </p>
               </div>
 
@@ -102,15 +105,13 @@ export default function SupportPage() {
                 href="/dashboard"
                 className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-bold text-slate-700 transition hover:bg-slate-50"
               >
-                ← العودة
+                ← {t("support.back")}
               </Link>
             </div>
           </div>
         </section>
 
         {/* ── BODY GRID ── */}
-        {/* On mobile: stacked (form first for UX, channels below)
-            On lg:    side-by-side (channels left, form right) */}
         <div className="flex flex-col-reverse gap-6 sm:gap-8 lg:grid lg:grid-cols-[1fr_1.2fr] lg:flex-none">
 
           {/* LEFT — قنوات الدعم */}
@@ -120,13 +121,13 @@ export default function SupportPage() {
             {isPro && (
               <div className="overflow-hidden rounded-2xl sm:rounded-[2rem] border border-purple-200 bg-gradient-to-br from-purple-600 to-indigo-700 p-5 sm:p-6 text-white shadow-xl">
                 <div className="mb-3 sm:mb-4 text-3xl sm:text-4xl">⚡</div>
-                <h2 className="text-lg sm:text-xl font-black">دعم بأولوية — Pro</h2>
+                <h2 className="text-lg sm:text-xl font-black">{t("support.proCardTitle")}</h2>
                 <p className="mt-2 text-xs sm:text-sm leading-relaxed text-purple-100">
-                  كمشترك في الباقة الاحترافية، طلبات دعمك تُعالج أولاً خلال{" "}
-                  <strong>4 ساعات عمل</strong>
+                  {t("support.proCardDescPrefix")}{" "}
+                  <strong>{t("support.proCardDescHours")}</strong>
                 </p>
                 <div className="mt-4 space-y-2">
-                  {["رد سريع خلال 4 ساعات", "دعم عبر واتساب مباشر", "حل مشاكل تقنية متقدمة"].map((f) => (
+                  {[t("support.proFeature1"), t("support.proFeature2"), t("support.proFeature3")].map((f) => (
                     <div key={f} className="flex items-center gap-2 text-xs sm:text-sm">
                       <span className="text-purple-300">✓</span>
                       <span>{f}</span>
@@ -138,7 +139,7 @@ export default function SupportPage() {
 
             {/* WhatsApp */}
             <a
-              href={`https://wa.me/966XXXXXXXXX?text=${encodeURIComponent(`مرحباً، أنا ${shopName} وأحتاج مساعدة في دَيني`)}`}
+              href={`https://wa.me/966XXXXXXXXX?text=${encodeURIComponent(t("support.whatsappGreeting", { shop: shopName, app: t("common.appName") }))}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 sm:gap-4 rounded-2xl sm:rounded-[2rem] border border-emerald-200 bg-white p-4 sm:p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl"
@@ -147,45 +148,45 @@ export default function SupportPage() {
                 💬
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-slate-900 text-sm sm:text-base">واتساب</p>
+                <p className="font-black text-slate-900 text-sm sm:text-base">{t("support.whatsappTitle")}</p>
                 <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500">
-                  {isPro ? "أولوية — رد خلال 4 ساعات" : "رد خلال 24 ساعة"}
+                  {isPro ? t("support.whatsappPro") : t("support.whatsappFree")}
                 </p>
               </div>
               {isPro && (
                 <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-700">
-                  أولوية
+                  {t("support.priorityTag")}
                 </span>
               )}
             </a>
 
             {/* Email */}
             <a
-              href={`mailto:support@dayni.app?subject=${encodeURIComponent(`[${plan.toUpperCase()}] ${shopName} — طلب دعم`)}`}
+              href={`mailto:support@dayni.app?subject=${encodeURIComponent(`[${plan.toUpperCase()}] ${shopName}`)}`}
               className="flex items-center gap-3 sm:gap-4 rounded-2xl sm:rounded-[2rem] border border-blue-200 bg-white p-4 sm:p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl"
             >
               <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-blue-50 text-2xl sm:text-3xl">
                 📧
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-slate-900 text-sm sm:text-base">البريد الإلكتروني</p>
-                <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 truncate">support@dayni.app</p>
+                <p className="font-black text-slate-900 text-sm sm:text-base">{t("support.emailTitle")}</p>
+                <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 truncate" dir="ltr">support@dayni.app</p>
               </div>
               <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${
                 isPro ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"
               }`}>
-                {isPro ? "أولوية" : "24-48 ساعة"}
+                {isPro ? t("support.priorityTag") : t("support.responseBasic")}
               </span>
             </a>
 
             {/* Response times */}
             <div className="rounded-2xl sm:rounded-[2rem] border border-slate-100 bg-slate-50 p-4 sm:p-5">
-              <h3 className="mb-3 text-sm sm:text-base font-bold text-slate-800">أوقات الرد المتوقعة</h3>
+              <h3 className="mb-3 text-sm sm:text-base font-bold text-slate-800">{t("support.responseTimesTitle")}</h3>
               <div className="space-y-2">
                 {[
-                  { plan: "Pro ✦", time: "خلال 4 ساعات", color: "text-purple-700 bg-purple-50" },
-                  { plan: "Basic", time: "خلال 24 ساعة",  color: "text-blue-700 bg-blue-50"    },
-                  { plan: "مجاني", time: "خلال 48 ساعة",  color: "text-slate-700 bg-slate-100" },
+                  { plan: "Pro ✦", time: t("support.responsePro"), color: "text-purple-700 bg-purple-50" },
+                  { plan: "Basic", time: t("support.responseBasic"),  color: "text-blue-700 bg-blue-50"    },
+                  { plan: t("nav.planFree"), time: t("support.responseFree"),  color: "text-slate-700 bg-slate-100" },
                 ].map((r) => (
                   <div key={r.plan} className="flex items-center justify-between gap-2">
                     <span className={`rounded-full px-2.5 sm:px-3 py-1 text-xs font-black ${r.color}`}>{r.plan}</span>
@@ -203,24 +204,24 @@ export default function SupportPage() {
             {sent ? (
               <div className="flex h-full min-h-[280px] flex-col items-center justify-center py-8 sm:py-10 text-center">
                 <div className="mb-3 sm:mb-4 text-5xl sm:text-6xl">✅</div>
-                <h2 className="text-xl sm:text-2xl font-black text-emerald-700">تم إرسال طلبك!</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-emerald-700">{t("support.successTitle")}</h2>
                 <p className="mt-2 text-sm sm:text-base text-slate-500">
-                  {isPro ? "سنرد عليك خلال 4 ساعات عمل" : "سنرد عليك في أقرب وقت"}
+                  {isPro ? t("support.successDescPro") : t("support.successDescFree")}
                 </p>
                 <button
                   onClick={() => setSent(false)}
                   className="mt-5 sm:mt-6 rounded-2xl bg-blue-600 px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition hover:bg-blue-700"
                 >
-                  إرسال طلب آخر
+                  {t("support.sendAnother")}
                 </button>
               </div>
             ) : (
               <>
                 <div className="mb-5 sm:mb-6">
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-950">أرسل طلب دعم</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-950">{t("support.formTitle")}</h2>
                   <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                    سيصلك الرد على{" "}
-                    <span className="font-bold text-slate-700 break-all">{email}</span>
+                    {t("support.formSubtitlePrefix")}{" "}
+                    <span className="font-bold text-slate-700 break-all" dir="ltr">{email}</span>
                   </p>
                 </div>
 
@@ -232,9 +233,9 @@ export default function SupportPage() {
                   }`}>
                     <span className="text-lg sm:text-xl">{isPro ? "⚡" : "📋"}</span>
                     <div>
-                      <p className="text-[10px] sm:text-xs font-bold text-slate-500">الباقة الحالية</p>
+                      <p className="text-[10px] sm:text-xs font-bold text-slate-500">{t("support.currentPlanLabel")}</p>
                       <p className={`text-xs sm:text-sm font-black ${isPro ? "text-purple-700" : "text-slate-700"}`}>
-                        {isPro ? "الاحترافية — أولوية دعم" : plan === "basic" ? "الأساسية" : "المجانية"}
+                        {isPro ? t("nav.planPro") : plan === "basic" ? t("nav.planBasic") : t("nav.planFree")}
                       </p>
                     </div>
                   </div>
@@ -242,14 +243,14 @@ export default function SupportPage() {
                   {/* Subject */}
                   <div>
                     <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">
-                      موضوع الطلب
+                      {t("support.subjectLabel")}
                     </label>
                     <input
                       type="text"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       required
-                      placeholder="مثال: مشكلة في إضافة عميل"
+                      placeholder={t("support.subjectPlaceholder")}
                       className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
@@ -257,30 +258,23 @@ export default function SupportPage() {
                   {/* Message */}
                   <div>
                     <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">
-                      تفاصيل المشكلة
+                      {t("support.messageLabel")}
                     </label>
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       required
                       rows={4}
-                      placeholder="اشرح المشكلة بالتفصيل..."
+                      placeholder={t("support.messagePlaceholder")}
                       className="w-full resize-none rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
 
                   {/* Quick topics */}
                   <div>
-                    <p className="mb-2 text-[10px] sm:text-xs font-bold text-slate-400">مواضيع شائعة</p>
+                    <p className="mb-2 text-[10px] sm:text-xs font-bold text-slate-400">{t("support.commonTopics")}</p>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {[
-                        "مشكلة في تسجيل الدخول",
-                        "لم يصلني رمز التحقق",
-                        "مشكلة في الدفع",
-                        "إضافة عميل",
-                        "تذكيرات واتساب",
-                        "تصدير البيانات",
-                      ].map((topic) => (
+                      {commonTopics.map((topic) => (
                         <button
                           key={topic}
                           type="button"
@@ -310,10 +304,10 @@ export default function SupportPage() {
                     {loading ? (
                       <>
                         <span className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        جاري الإرسال...
+                        {t("support.submitting")}
                       </>
                     ) : (
-                      <>{isPro ? "⚡" : "📧"} إرسال طلب الدعم</>
+                      <>{isPro ? "⚡" : "📧"} {t("support.submit")}</>
                     )}
                   </button>
                 </form>
