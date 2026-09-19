@@ -1,13 +1,13 @@
 /* eslint-disable react-hooks/immutability */
-// app/team/page.tsx
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 type Member = {
   _id:       string;
@@ -18,15 +18,16 @@ type Member = {
   createdAt: string;
 };
 
-const statusLabel: Record<string, { label: string; classes: string }> = {
-  pending:  { label: "في الانتظار", classes: "bg-amber-100 text-amber-700"    },
-  active:   { label: "نشط",         classes: "bg-emerald-100 text-emerald-700" },
-  disabled: { label: "معطّل",        classes: "bg-slate-100 text-slate-600"    },
-};
-
 export default function TeamPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t, dir } = useTranslation();
+
+  const statusLabel: Record<string, { label: string; classes: string }> = {
+    pending:  { label: t("team.statusPending"),  classes: "bg-amber-100 text-amber-700"    },
+    active:   { label: t("team.statusActive"),   classes: "bg-emerald-100 text-emerald-700" },
+    disabled: { label: t("team.statusDisabled"), classes: "bg-slate-100 text-slate-600"    },
+  };
 
   const [members,    setMembers]    = useState<Member[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -44,6 +45,7 @@ export default function TeamPage() {
     if (!session?.user?.id)  { router.replace("/login");   return; }
     if (plan !== "pro")      { router.replace("/pricing"); return; }
     fetchMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session]);
 
   const fetchMembers = async () => {
@@ -53,7 +55,7 @@ export default function TeamPage() {
       if (!res.ok) throw new Error(data.error);
       setMembers(data.members || []);
     } catch (err: any) {
-      toast.error(err.message || "فشل جلب الأعضاء");
+      toast.error(err.message || t("team.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,7 @@ export default function TeamPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteName.trim() || !inviteEmail.trim()) { toast.error("الاسم والبريد الإلكتروني مطلوبان"); return; }
+    if (!inviteName.trim() || !inviteEmail.trim()) { toast.error(t("team.nameEmailRequired")); return; }
     setInviting(true);
     try {
       const res  = await fetch("/api/team", {
@@ -71,12 +73,12 @@ export default function TeamPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success(`تم إرسال الدعوة إلى ${inviteEmail}`);
+      toast.success(`${t("team.inviteSentPrefix")} ${inviteEmail}`);
       setShowInvite(false);
       setInviteName(""); setInviteEmail(""); setInviteRole("member");
       fetchMembers();
     } catch (err: any) {
-      toast.error(err.message || "فشل إرسال الدعوة");
+      toast.error(err.message || t("team.inviteFailed"));
     } finally {
       setInviting(false);
     }
@@ -90,9 +92,9 @@ export default function TeamPage() {
         body:    JSON.stringify({ role }),
       });
       if (!res.ok) throw new Error();
-      toast.success("تم تحديث الدور");
+      toast.success(t("team.roleUpdated"));
       setMembers(prev => prev.map(m => m._id === memberId ? { ...m, role: role as any } : m));
-    } catch { toast.error("فشل تحديث الدور"); }
+    } catch { toast.error(t("team.roleUpdateFailed")); }
   };
 
   const handleToggleStatus = async (member: Member) => {
@@ -104,47 +106,46 @@ export default function TeamPage() {
         body:    JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
-      toast.success(newStatus === "disabled" ? "تم تعطيل العضو" : "تم تفعيل العضو");
+      toast.success(newStatus === "disabled" ? t("team.memberDisabled") : t("team.memberEnabled"));
       setMembers(prev => prev.map(m => m._id === member._id ? { ...m, status: newStatus } : m));
-    } catch { toast.error("فشل تحديث الحالة"); }
+    } catch { toast.error(t("team.statusUpdateFailed")); }
   };
 
   const handleDelete = async (member: Member) => {
-  toast(`هل أنت متأكد من حذف "${member.name}"؟`, {
-    action: {
-      label: "حذف",
-      onClick: async () => {
-        try {
-          const res = await fetch(`/api/team/${member._id}`, {
-            method: "DELETE",
-          });
+    toast(t("team.deleteConfirm", { name: member.name }), {
+      action: {
+        label: t("team.deleteConfirmAction"),
+        onClick: async () => {
+          try {
+            const res = await fetch(`/api/team/${member._id}`, {
+              method: "DELETE",
+            });
 
-          if (!res.ok) throw new Error();
+            if (!res.ok) throw new Error();
 
-          toast.success("تم حذف العضو");
+            toast.success(t("team.memberDeleted"));
 
-          setMembers((prev) =>
-            prev.filter((m) => m._id !== member._id)
-          );
-        } catch {
-          toast.error("فشل حذف العضو");
-        }
+            setMembers((prev) =>
+              prev.filter((m) => m._id !== member._id)
+            );
+          } catch {
+            toast.error(t("team.memberDeleteFailed"));
+          }
+        },
       },
-    },
-
-    cancel: {
-      label: "إلغاء",
-      onClick: () => {},
-    },
-  });
-};
+      cancel: {
+        label: t("team.cancelAction"),
+        onClick: () => {},
+      },
+    });
+  };
 
   if (loading || status === "loading") {
     return (
-      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main dir={dir} className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
           <div className="mx-auto mb-3 h-10 w-10 sm:h-12 sm:w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-          <p className="text-sm sm:text-lg font-bold text-slate-800">جاري التحميل...</p>
+          <p className="text-sm sm:text-lg font-bold text-slate-800">{t("team.loadingTitle")}</p>
         </div>
       </main>
     );
@@ -154,28 +155,28 @@ export default function TeamPage() {
   const pendingCount = members.filter(m => m.status === "pending").length;
 
   return (
-    <main dir="rtl" className="relative min-h-screen overflow-hidden bg-slate-50 py-4 sm:py-6 lg:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-20 left-0 h-72 w-72 rounded-full bg-purple-100/40 blur-3xl pointer-events-none" />
+    <main dir={dir} className="relative min-h-screen overflow-hidden bg-slate-50 py-4 sm:py-6 lg:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-20 start-0 h-72 w-72 rounded-full bg-purple-100/40 blur-3xl pointer-events-none" />
 
       <div className="container relative z-10 mx-auto max-w-5xl px-3 sm:px-6">
 
         {/* ── HEADER ── */}
         <section className="mb-4 sm:mb-6 lg:mb-8 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-slate-200/70">
           <div className="relative p-4 sm:p-6 lg:p-10">
-            <div className="absolute left-0 top-0 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-br-[2rem] lg:rounded-br-[4rem] bg-blue-50" />
-            <div className="absolute bottom-0 right-0 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-tl-[2rem] lg:rounded-tl-[4rem] bg-purple-50" />
+            <div className="absolute start-0 top-0 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-ee-[2rem] lg:rounded-ee-[4rem] bg-blue-50" />
+            <div className="absolute bottom-0 end-0 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-ss-[2rem] lg:rounded-ss-[4rem] bg-purple-50" />
             <div className="relative flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="mb-2 sm:mb-3 lg:mb-4 flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <span className="inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">الفريق</span>
-                  <span className="inline-flex rounded-full bg-purple-100 px-3 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-black text-purple-700">PRO ✦</span>
+                  <span className="inline-flex rounded-full bg-blue-50 px-3 sm:px-5 py-1 sm:py-2 text-xs sm:text-sm font-bold text-blue-700">{t("team.badge")}</span>
+                  <span className="inline-flex rounded-full bg-purple-100 px-3 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-black text-purple-700">{t("team.proBadge")}</span>
                 </div>
                 <h1 className="text-xl sm:text-3xl lg:text-4xl xl:text-5xl font-semibold leading-tight text-slate-950">
-                  إدارة الفريق
+                  {t("team.title")}
                 </h1>
                 <p className="mt-1 sm:mt-2 lg:mt-3 text-xs sm:text-base lg:text-lg leading-relaxed text-slate-600">
-                  ادعُ أعضاء للعمل معك. يمكنك إضافة حتى <strong>5 أعضاء</strong>.
+                  {t("team.subtitlePrefix")} <strong>{t("team.maxMembers")}</strong> {t("team.subtitleSuffix")}
                 </p>
               </div>
               <div className="flex gap-2 sm:gap-3">
@@ -183,14 +184,14 @@ export default function TeamPage() {
                   href="/dashboard"
                   className="inline-flex items-center justify-center rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-3 sm:px-5 py-2.5 sm:py-4 text-xs sm:text-base font-bold text-slate-700 transition hover:bg-slate-50"
                 >
-                  ← العودة
+                  ← {t("team.back")}
                 </Link>
                 <button
                   onClick={() => setShowInvite(true)}
                   disabled={members.filter(m => m.status !== "disabled").length >= 5}
                   className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl bg-blue-600 px-3 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-base font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:-translate-y-1 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span className="text-sm sm:text-xl">+</span> دعوة عضو
+                  <span className="text-sm sm:text-xl">+</span> {t("team.inviteButton")}
                 </button>
               </div>
             </div>
@@ -200,9 +201,9 @@ export default function TeamPage() {
         {/* ── STATS ── */}
         <section className="mb-4 sm:mb-6 lg:mb-8 grid grid-cols-3 gap-2 sm:gap-4">
           {[
-            { label: "إجمالي الأعضاء", value: members.length, icon: "👥", color: "blue"    },
-            { label: "نشطون",           value: activeCount,    icon: "✅", color: "emerald" },
-            { label: "في الانتظار",     value: pendingCount,   icon: "⏳", color: "amber"   },
+            { label: t("team.statTotal"),   value: members.length, icon: "👥", color: "blue"    },
+            { label: t("team.statActive"),  value: activeCount,    icon: "✅", color: "emerald" },
+            { label: t("team.statPending"), value: pendingCount,   icon: "⏳", color: "amber"   },
           ].map(s => (
             <div key={s.label} className="rounded-xl sm:rounded-2xl lg:rounded-[1.75rem] border border-slate-200 bg-white p-3 sm:p-5 lg:p-6 shadow-sm">
               <div className="mb-2 sm:mb-3 lg:mb-4 text-xl sm:text-2xl lg:text-3xl">{s.icon}</div>
@@ -217,20 +218,20 @@ export default function TeamPage() {
         {/* ── MEMBERS LIST ── */}
         <section className="overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-slate-200/70">
           <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-5">
-            <h2 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-950">أعضاء الفريق</h2>
-            <p className="mt-0.5 text-[10px] sm:text-sm text-slate-500">{members.length} / 5 أعضاء</p>
+            <h2 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-950">{t("team.membersListTitle")}</h2>
+            <p className="mt-0.5 text-[10px] sm:text-sm text-slate-500">{t("team.membersCount", { count: members.length })}</p>
           </div>
 
           {members.length === 0 ? (
             <div className="px-4 sm:px-6 py-12 sm:py-16 lg:py-20 text-center">
               <div className="mb-3 sm:mb-4 text-4xl sm:text-5xl">👥</div>
-              <p className="text-sm sm:text-lg font-bold text-slate-700">لا يوجد أعضاء بعد</p>
-              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500">ابدأ بدعوة أول عضو في فريقك</p>
+              <p className="text-sm sm:text-lg font-bold text-slate-700">{t("team.emptyTitle")}</p>
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500">{t("team.emptyDesc")}</p>
               <button
                 onClick={() => setShowInvite(true)}
                 className="mt-4 sm:mt-6 inline-flex rounded-xl sm:rounded-2xl bg-blue-600 px-5 sm:px-8 py-2.5 sm:py-4 text-xs sm:text-base font-bold text-white transition hover:bg-blue-700"
               >
-                دعوة عضو الآن
+                {t("team.inviteNow")}
               </button>
             </div>
           ) : (
@@ -242,23 +243,20 @@ export default function TeamPage() {
                 >
                   {/* ── Mobile layout (< sm) ── */}
                   <div className="flex items-start justify-between gap-3 sm:hidden">
-                    {/* Avatar + info */}
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-base font-black text-blue-700">
                         {member.name[0]}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-900 truncate">{member.name}</p>
-                        <p className="text-[10px] text-slate-500 truncate">{member.email}</p>
+                        <p className="text-[10px] text-slate-500 truncate" dir="ltr">{member.email}</p>
                       </div>
                     </div>
-                    {/* Status badge */}
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${statusLabel[member.status].classes}`}>
                       {statusLabel[member.status].label}
                     </span>
                   </div>
 
-                  {/* Actions row — mobile */}
                   <div className="mt-2.5 flex items-center gap-1.5 sm:hidden flex-wrap">
                     <select
                       value={member.role}
@@ -266,39 +264,37 @@ export default function TeamPage() {
                       disabled={member.status === "pending"}
                       className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 outline-none disabled:opacity-50"
                     >
-                      <option value="member">عضو</option>
-                      <option value="admin">مدير</option>
+                      <option value="member">{t("team.roleMember")}</option>
+                      <option value="admin">{t("team.roleAdmin")}</option>
                     </select>
                     {member.status !== "pending" && (
                       <button
                         onClick={() => handleToggleStatus(member)}
                         className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${member.status === "active" ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-700"}`}
                       >
-                        {member.status === "active" ? "تعطيل" : "تفعيل"}
+                        {member.status === "active" ? t("team.disable") : t("team.enable")}
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(member)}
                       className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 transition hover:bg-red-100"
                     >
-                      حذف
+                      {t("team.delete")}
                     </button>
                   </div>
 
                   {/* ── Tablet/Desktop layout (≥ sm) ── */}
                   <div className="hidden sm:flex sm:items-center sm:justify-between sm:gap-4">
-                    {/* Avatar + info */}
                     <div className="flex items-center gap-3 lg:gap-4 min-w-0">
                       <div className="flex h-10 w-10 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-xl lg:rounded-2xl bg-blue-50 text-base lg:text-xl font-black text-blue-700">
                         {member.name[0]}
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm lg:text-base font-bold text-slate-900">{member.name}</p>
-                        <p className="text-xs lg:text-sm text-slate-500 truncate">{member.email}</p>
+                        <p className="text-xs lg:text-sm text-slate-500 truncate" dir="ltr">{member.email}</p>
                       </div>
                     </div>
 
-                    {/* Controls */}
                     <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
                       <span className={`rounded-full px-2.5 lg:px-3 py-1 text-[10px] lg:text-xs font-black ${statusLabel[member.status].classes}`}>
                         {statusLabel[member.status].label}
@@ -309,8 +305,8 @@ export default function TeamPage() {
                         disabled={member.status === "pending"}
                         className="rounded-lg lg:rounded-xl border border-slate-200 bg-slate-50 px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-bold text-slate-700 outline-none disabled:opacity-50"
                       >
-                        <option value="member">عضو</option>
-                        <option value="admin">مدير</option>
+                        <option value="member">{t("team.roleMember")}</option>
+                        <option value="admin">{t("team.roleAdmin")}</option>
                       </select>
                       {member.status !== "pending" && (
                         <button
@@ -321,14 +317,14 @@ export default function TeamPage() {
                               : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                           }`}
                         >
-                          {member.status === "active" ? "تعطيل" : "تفعيل"}
+                          {member.status === "active" ? t("team.disable") : t("team.enable")}
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(member)}
                         className="rounded-lg lg:rounded-xl bg-red-50 px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-bold text-red-600 transition hover:bg-red-100"
                       >
-                        حذف
+                        {t("team.delete")}
                       </button>
                     </div>
                   </div>
@@ -343,12 +339,12 @@ export default function TeamPage() {
           <div className="flex items-start gap-3 sm:gap-4">
             <span className="text-2xl sm:text-3xl">💡</span>
             <div>
-              <p className="text-xs sm:text-sm lg:text-base font-bold text-blue-800">كيف يعمل نظام الفريق؟</p>
+              <p className="text-xs sm:text-sm lg:text-base font-bold text-blue-800">{t("team.howItWorksTitle")}</p>
               <ul className="mt-1.5 sm:mt-2 space-y-1 text-[10px] sm:text-xs lg:text-sm leading-relaxed text-blue-700">
-                <li>• <strong>مدير</strong> — يقدر يضيف عملاء، فواتير، ومدفوعات</li>
-                <li>• <strong>عضو</strong> — يقدر يشوف البيانات فقط بدون تعديل</li>
-                <li>• الدعوة صالحة لمدة <strong>48 ساعة</strong></li>
-                <li>• يمكنك تعطيل أي عضو في أي وقت</li>
+                <li>• <strong>{t("team.roleAdmin")}</strong> — {t("team.howItWorksAdmin")}</li>
+                <li>• <strong>{t("team.roleMember")}</strong> — {t("team.howItWorksMember")}</li>
+                <li>• {t("team.howItWorksExpiry")}</li>
+                <li>• {t("team.howItWorksDisable")}</li>
               </ul>
             </div>
           </div>
@@ -364,35 +360,36 @@ export default function TeamPage() {
               <div className="mx-auto mb-3 sm:mb-4 flex h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-blue-50 text-3xl sm:text-4xl">
                 📩
               </div>
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-950">دعوة عضو جديد</h3>
-              <p className="mt-1 text-xs sm:text-sm text-slate-500">سيصله إيميل بالدعوة لينضم لفريقك</p>
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-950">{t("team.inviteModalTitle")}</h3>
+              <p className="mt-1 text-xs sm:text-sm text-slate-500">{t("team.inviteModalSubtitle")}</p>
             </div>
 
             <form onSubmit={handleInvite} className="space-y-3 sm:space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs sm:text-sm font-bold text-slate-600">الاسم</label>
+                <label className="mb-1.5 block text-xs sm:text-sm font-bold text-slate-600">{t("team.nameLabel")}</label>
                 <input
                   type="text" value={inviteName} onChange={e => setInviteName(e.target.value)} required
-                  placeholder="اسم العضو"
+                  placeholder={t("team.namePlaceholder")}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 sm:py-3.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs sm:text-sm font-bold text-slate-600">البريد الإلكتروني</label>
+                <label className="mb-1.5 block text-xs sm:text-sm font-bold text-slate-600">{t("team.emailLabel")}</label>
                 <input
                   type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} required
-                  placeholder="email@example.com"
+                  placeholder={t("team.emailPlaceholder")}
+                  dir="ltr"
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 sm:py-3.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs sm:text-sm font-bold text-slate-600">الدور</label>
+                <label className="mb-1.5 block text-xs sm:text-sm font-bold text-slate-600">{t("team.roleLabel")}</label>
                 <select
                   value={inviteRole} onChange={e => setInviteRole(e.target.value as any)}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 sm:py-3.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                 >
-                  <option value="member">عضو — يشوف البيانات فقط</option>
-                  <option value="admin">مدير — يضيف ويعدّل</option>
+                  <option value="member">{t("team.roleMemberOption")}</option>
+                  <option value="admin">{t("team.roleAdminOption")}</option>
                 </select>
               </div>
 
@@ -402,13 +399,13 @@ export default function TeamPage() {
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-blue-600 py-3 sm:py-3.5 lg:py-4 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-60"
                 >
                   {inviting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : "📩"}
-                  إرسال الدعوة
+                  {t("team.sendInvite")}
                 </button>
                 <button
                   type="button" onClick={() => setShowInvite(false)}
                   className="rounded-xl sm:rounded-2xl bg-slate-100 px-5 sm:px-6 py-3 sm:py-3.5 text-sm font-bold text-slate-700 transition hover:bg-slate-200"
                 >
-                  إلغاء
+                  {t("team.cancel")}
                 </button>
               </div>
             </form>

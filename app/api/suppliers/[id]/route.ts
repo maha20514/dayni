@@ -22,14 +22,14 @@ export async function GET(
 
     const userId = await getOwnerIdFromToken(req);
     if (!userId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { id } = await params;
 
     const supplier = await Supplier.findOne({ _id: id, userId }).lean();
     if (!supplier) {
-      return NextResponse.json({ error: "المورد غير موجود" }, { status: 404 });
+      return NextResponse.json({ error: "SUPPLIER_NOT_FOUND" }, { status: 404 });
     }
 
     const [debts, payments] = await Promise.all([
@@ -54,7 +54,7 @@ export async function GET(
     });
   } catch (error: any) {
     console.error("GET /api/suppliers/[id] error:", error);
-    return NextResponse.json({ error: "خطأ داخلي" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }
 
@@ -68,14 +68,14 @@ export async function DELETE(
 
     const userId = await getOwnerIdFromToken(req);
     if (!userId) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { id } = await params;
 
     const supplier = await Supplier.findOne({ _id: id, userId });
     if (!supplier) {
-      return NextResponse.json({ error: "المورد غير موجود" }, { status: 404 });
+      return NextResponse.json({ error: "SUPPLIER_NOT_FOUND" }, { status: 404 });
     }
 
     await Promise.all([
@@ -87,6 +87,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/suppliers/[id] error:", error);
-    return NextResponse.json({ error: "حدث خطأ أثناء الحذف" }, { status: 500 });
+    return NextResponse.json({ error: "DELETE_FAILED" }, { status: 500 });
   }
 }

@@ -5,7 +5,7 @@ export interface IUser extends Document {
   shopName: string;
   email: string;
   password: string;
-  avatar?: string;                   
+  avatar?: string;
 
   plan: 'free' | 'basic' | 'pro';
   maxCustomers: number;
@@ -15,8 +15,10 @@ export interface IUser extends Document {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   provider: "credentials" | "google";
-  isVerified: boolean,
-  
+  isVerified: boolean;
+  /** UI language the user registered/last used — drives which language
+   *  transactional emails (OTP, password reset, team invites) are sent in. */
+  preferredLanguage: "ar" | "en";
 }
 
 const UserSchema = new Schema({
@@ -81,6 +83,11 @@ provider: {
 isVerified: {
   type: Boolean,
   default: false,   
+},
+preferredLanguage: {
+  type: String,
+  enum: ["ar", "en"],
+  default: "ar",
 },
 }, 
 { timestamps: true });

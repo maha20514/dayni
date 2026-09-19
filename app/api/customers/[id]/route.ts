@@ -15,12 +15,12 @@ export async function GET(
     const { id } = await params;   
 
     if (!id) {
-      return NextResponse.json({ error: "Customer ID missing" }, { status: 400 });
+      return NextResponse.json({ error: "CUSTOMER_ID_REQUIRED" }, { status: 400 });
     }
 
     const customer = await Customer.findById(id).lean();
     if (!customer) {
-      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+      return NextResponse.json({ error: "CUSTOMER_NOT_FOUND" }, { status: 404 });
     }
 
     const invoices = await Invoice.find({ customerId: id }).lean();
@@ -34,7 +34,7 @@ export async function GET(
     return NextResponse.json({ ...customer, transactions });
   } catch (error) {
     console.error("GET /customers/[id] error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }
 
@@ -47,12 +47,12 @@ export async function DELETE(
     const { id } = await params;
 
     if (!id) {
-      return NextResponse.json({ error: "معرف العميل مطلوب" }, { status: 400 });
+      return NextResponse.json({ error: "CUSTOMER_ID_REQUIRED" }, { status: 400 });
     }
 
     const customer = await Customer.findById(id);
     if (!customer) {
-      return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+      return NextResponse.json({ error: "CUSTOMER_NOT_FOUND" }, { status: 404 });
     }
 
     await Invoice.deleteMany({ customerId: id });
@@ -60,14 +60,10 @@ export async function DELETE(
 
     await Customer.findByIdAndDelete(id);
 
-    return NextResponse.json({ 
-      message: "تم حذف العميل وبياناته بنجاح" 
-    });
+    return NextResponse.json({ success: true });
 
   } catch (error: any) {
     console.error("Delete Customer Error:", error);
-    return NextResponse.json({ 
-      error: "حدث خطأ أثناء حذف العميل" 
-    }, { status: 500 });
+    return NextResponse.json({ error: "DELETE_FAILED" }, { status: 500 });
   }
 }

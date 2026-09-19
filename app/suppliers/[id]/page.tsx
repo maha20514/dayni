@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
 
 type Transaction = {
   _id:         string;
@@ -35,6 +36,7 @@ export default function SupplierDetailPage() {
   const router    = useRouter();
   const { data: session, status } = useSession();
   const supplierId = params.id as string;
+  const { t, dir, locale } = useTranslation();
 
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [loading,  setLoading]  = useState(true);
@@ -50,13 +52,11 @@ export default function SupplierDetailPage() {
   const [payNotes,  setPayNotes]  = useState("");
   const [savingPay, setSavingPay] = useState(false);
 
-  // PDF share state per transaction
-  const [sharingId, setSharingId] = useState<string | null>(null);
-
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.user?.id) { router.replace("/login"); return; }
     fetchSupplier();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session]);
 
   const fetchSupplier = async () => {
@@ -66,7 +66,7 @@ export default function SupplierDetailPage() {
       if (!res.ok) throw new Error(data.error);
       setSupplier(data);
     } catch (err: any) {
-      toast.error(err.message || "فشل تحميل المورد");
+      toast.error(err.message || t("supplierDetail.loadFailed"));
       router.replace("/suppliers");
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ export default function SupplierDetailPage() {
 
   const handleAddDebt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!debtAmount || Number(debtAmount) <= 0) { toast.error("أدخل مبلغاً صحيحاً"); return; }
+    if (!debtAmount || Number(debtAmount) <= 0) { toast.error(t("supplierDetail.invalidAmount")); return; }
     setSavingDebt(true);
     try {
       const res = await fetch("/api/purchase-debts", {
@@ -85,12 +85,12 @@ export default function SupplierDetailPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("تم تسجيل الدين بنجاح");
+      toast.success(t("supplierDetail.debtSuccess"));
       setDebtAmount(""); setDebtDesc(""); setDebtDueDate("");
       setActiveTab("transactions");
       fetchSupplier();
     } catch (err: any) {
-      toast.error(err.message || "فشل التسجيل");
+      toast.error(err.message || t("supplierDetail.debtFailed"));
     } finally {
       setSavingDebt(false);
     }
@@ -98,7 +98,7 @@ export default function SupplierDetailPage() {
 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payAmount || Number(payAmount) <= 0) { toast.error("أدخل مبلغاً صحيحاً"); return; }
+    if (!payAmount || Number(payAmount) <= 0) { toast.error(t("supplierDetail.invalidAmount")); return; }
     setSavingPay(true);
     try {
       const res = await fetch("/api/purchase-payments", {
@@ -108,35 +108,35 @@ export default function SupplierDetailPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("تم تسجيل الدفعة بنجاح");
+      toast.success(t("supplierDetail.paymentSuccess"));
       setPayAmount(""); setPayNotes("");
       setActiveTab("transactions");
       fetchSupplier();
     } catch (err: any) {
-      toast.error(err.message || "فشل التسجيل");
+      toast.error(err.message || t("supplierDetail.paymentFailed"));
     } finally {
       setSavingPay(false);
     }
   };
 
-  
+  const handleShareInvoice = (tItem: Transaction) => {
+    const isPay = tItem.type === "دفعة";
+    const url = isPay
+      ? `/payments/purchase-payments/${tItem._id}`
+      : `/invoices/purchase-debts/${tItem._id}`;
 
-const handleShareInvoice = (t: Transaction) => {
-  const isPay = t.type === "دفعة";
-  const url = isPay
-    ? `/payments/purchase-payments/${t._id}`
-    : `/invoices/purchase-debts/${t._id}`;
+    const win = window.open(url, "_blank");
+    if (!win) toast.error(t("supplierDetail.popupBlocked"));
+  };
 
-  const win = window.open(url, "_blank");
-  if (!win) toast.error("يرجى السماح بالنوافذ المنبثقة");
-};
+  const fmt = (v: number) => formatNumber(v, locale);
 
   if (loading) {
     return (
-      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main dir={dir} className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
           <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-amber-100 border-t-amber-600" />
-          <p className="font-bold text-slate-800">جاري التحميل...</p>
+          <p className="font-bold text-slate-800">{t("supplierDetail.loadingTitle")}</p>
         </div>
       </main>
     );
@@ -145,17 +145,17 @@ const handleShareInvoice = (t: Transaction) => {
   if (!supplier) return null;
 
   return (
-    <main dir="rtl" className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
-      <div className="absolute right-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-amber-100/60 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-orange-100/50 blur-3xl" />
+    <main dir={dir} className="relative min-h-screen overflow-hidden bg-slate-50 py-6 sm:py-10 text-slate-900">
+      <div className="absolute end-0 top-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-amber-100/60 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-orange-100/50 blur-3xl" />
 
       <div className="container relative z-10 mx-auto max-w-5xl px-3 sm:px-6">
 
         {/* HEADER */}
         <section className="mb-4 sm:mb-6 overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-lg sm:shadow-xl shadow-slate-200/70">
           <div className="relative p-4 sm:p-6 md:p-8">
-            <div className="absolute left-0 top-0 h-20 w-20 sm:h-28 sm:w-28 rounded-br-[2rem] sm:rounded-br-[4rem] bg-amber-50" />
-            <div className="absolute bottom-0 right-0 h-20 w-20 sm:h-28 sm:w-28 rounded-tl-[2rem] sm:rounded-tl-[4rem] bg-orange-50" />
+            <div className="absolute start-0 top-0 h-20 w-20 sm:h-28 sm:w-28 rounded-ee-[2rem] sm:rounded-ee-[4rem] bg-amber-50" />
+            <div className="absolute bottom-0 end-0 h-20 w-20 sm:h-28 sm:w-28 rounded-ss-[2rem] sm:rounded-ss-[4rem] bg-orange-50" />
 
             <div className="relative flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -163,10 +163,10 @@ const handleShareInvoice = (t: Transaction) => {
                   {supplier.name[0]}
                 </div>
                 <div className="min-w-0">
-                  <span className="mb-1 inline-flex rounded-full bg-amber-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold text-amber-700">مورد</span>
+                  <span className="mb-1 inline-flex rounded-full bg-amber-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold text-amber-700">{t("supplierDetail.badge")}</span>
                   <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-950 leading-tight truncate">{supplier.name}</h1>
                   {supplier.company && <p className="text-slate-500 text-xs sm:text-sm mt-0.5 truncate">{supplier.company}</p>}
-                  {supplier.phone   && <p className="text-slate-500 text-xs sm:text-sm mt-0.5">📱 {supplier.phone}</p>}
+                  {supplier.phone   && <p className="text-slate-500 text-xs sm:text-sm mt-0.5" dir="ltr">📱 {supplier.phone}</p>}
                 </div>
               </div>
 
@@ -174,15 +174,15 @@ const handleShareInvoice = (t: Transaction) => {
                 <div className={`rounded-xl sm:rounded-2xl border px-4 sm:px-5 py-2.5 sm:py-3 text-center ${
                   supplier.remaining > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"
                 }`}>
-                  <p className="text-[10px] sm:text-xs font-bold text-slate-500">المتبقي</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-500">{t("supplierDetail.remaining")}</p>
                   <p className={`text-xl sm:text-2xl font-black leading-tight ${supplier.remaining > 0 ? "text-red-700" : "text-emerald-700"}`}>
-                    {supplier.remaining.toLocaleString("ar-SA")}
-                    <span className="text-sm sm:text-base font-bold"> ريال</span>
+                    {fmt(supplier.remaining)}
+                    <span className="text-sm sm:text-base font-bold"> {t("supplierDetail.riyal")}</span>
                   </p>
                 </div>
                 <Link href="/suppliers"
                   className="flex h-10 sm:h-12 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-3 sm:px-4 text-xs sm:text-sm font-bold text-slate-700 transition hover:bg-slate-50 whitespace-nowrap">
-                  ← الموردون
+                  ← {t("supplierDetail.backLink")}
                 </Link>
               </div>
             </div>
@@ -192,15 +192,15 @@ const handleShareInvoice = (t: Transaction) => {
         {/* QUICK STATS */}
         <section className="mb-4 sm:mb-6 grid grid-cols-3 gap-2 sm:gap-4">
           {[
-            { label: "إجمالي المشتريات", value: supplier.totalDebt, color: "red",     icon: "📦" },
-            { label: "إجمالي المدفوع",   value: supplier.totalPaid, color: "emerald", icon: "✅" },
-            { label: "المتبقي",           value: supplier.remaining, color: "amber",   icon: "💸" },
+            { label: t("supplierDetail.statPurchases"), value: supplier.totalDebt, color: "red",     icon: "📦" },
+            { label: t("supplierDetail.statPaid"),       value: supplier.totalPaid, color: "emerald", icon: "✅" },
+            { label: t("supplierDetail.statRemaining"),  value: supplier.remaining, color: "amber",   icon: "💸" },
           ].map(s => (
             <div key={s.label} className="rounded-xl sm:rounded-2xl border border-slate-200 bg-white p-3 sm:p-5 shadow-sm">
               <div className="mb-1.5 sm:mb-2 text-lg sm:text-2xl">{s.icon}</div>
               <p className="text-[10px] sm:text-xs font-bold text-slate-500 leading-tight">{s.label}</p>
               <p className={`mt-1 text-sm sm:text-xl font-black text-${s.color}-700 leading-tight`}>
-                {s.value.toLocaleString("ar-SA")} <span className="text-[10px] sm:text-sm font-bold">ريال</span>
+                {fmt(s.value)} <span className="text-[10px] sm:text-sm font-bold">{t("supplierDetail.riyal")}</span>
               </p>
             </div>
           ))}
@@ -209,9 +209,9 @@ const handleShareInvoice = (t: Transaction) => {
         {/* TABS */}
         <div className="mb-4 sm:mb-5 flex gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white p-1 sm:p-1.5">
           {[
-            { id: "transactions", label: "السجل",      icon: "📋" },
-            { id: "debt",         label: "تسجيل دين",  icon: "📦" },
-            { id: "payment",      label: "تسجيل دفعة", icon: "💰" },
+            { id: "transactions", label: t("supplierDetail.tabTransactions"), icon: "📋" },
+            { id: "debt",         label: t("supplierDetail.tabDebt"),         icon: "📦" },
+            { id: "payment",      label: t("supplierDetail.tabPayment"),      icon: "💰" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -232,71 +232,66 @@ const handleShareInvoice = (t: Transaction) => {
         {activeTab === "transactions" && (
           <section className="overflow-hidden rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white shadow-lg sm:shadow-xl shadow-slate-200/70">
             <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4">
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">سجل المعاملات</h2>
-              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{supplier.transactions.length} معاملة</p>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">{t("supplierDetail.transactionsLog")}</h2>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{t("supplierDetail.transactionsCount", { count: fmt(supplier.transactions.length) })}</p>
             </div>
 
             {supplier.transactions.length === 0 ? (
               <div className="py-12 sm:py-16 text-center px-4">
                 <div className="mb-3 text-3xl sm:text-4xl">📭</div>
-                <p className="text-sm sm:text-base font-bold text-slate-700">لا توجد معاملات بعد</p>
-                <p className="mt-1 text-xs sm:text-sm text-slate-500">سجّل دين أو دفعة للبداية</p>
+                <p className="text-sm sm:text-base font-bold text-slate-700">{t("supplierDetail.emptyTransactionsTitle")}</p>
+                <p className="mt-1 text-xs sm:text-sm text-slate-500">{t("supplierDetail.emptyTransactionsDesc")}</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-50">
-                {supplier.transactions.map(t => {
-                  const isPay = t.type === "دفعة";
-                  const isSharing = sharingId === t._id;
+                {supplier.transactions.map(tItem => {
+                  const isPay = tItem.type === "دفعة";
                   return (
-                    <div key={t._id} className="flex items-center gap-2 sm:gap-4 p-3 sm:p-5 transition hover:bg-slate-50">
+                    <div key={tItem._id} className="flex items-center gap-2 sm:gap-4 p-3 sm:p-5 transition hover:bg-slate-50">
 
-                      {/* Type icon */}
                       <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-xl ${
                         isPay ? "bg-emerald-100" : "bg-red-100"
                       }`}>
                         {isPay ? "💰" : "📦"}
                       </div>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                           <span className={`rounded-full px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-black ${
                             isPay ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                           }`}>
-                            {t.type}
+                            {isPay ? t("supplierDetail.typePayment") : t("supplierDetail.typeDebt")}
                           </span>
-                          {t.dueDate && (
+                          {tItem.dueDate && (
                             <span className="rounded-full bg-amber-100 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-amber-700">
-                              📅 {new Date(t.dueDate).toLocaleDateString("ar-SA")}
+                              📅 {new Date(tItem.dueDate).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US")}
                             </span>
                           )}
                         </div>
                         <p className="mt-1 text-xs sm:text-sm text-slate-600 truncate">
-                          {t.description || t.notes || "—"}
+                          {tItem.description || tItem.notes || "—"}
                         </p>
                         <p className="mt-0.5 text-[10px] sm:text-xs text-slate-400">
-                          {new Date(t.date).toLocaleDateString("ar-SA")}
+                          {new Date(tItem.date).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US")}
                         </p>
                       </div>
 
-                      {/* Amount */}
                       <p className={`shrink-0 text-sm sm:text-lg font-black ${isPay ? "text-emerald-600" : "text-red-600"}`}>
-                        {isPay ? "−" : "+"}{Number(t.amount).toLocaleString("ar-SA")}
-                        <span className="text-[10px] sm:text-sm font-bold"> ريال</span>
+                        {isPay ? "−" : "+"}{fmt(tItem.amount)}
+                        <span className="text-[10px] sm:text-sm font-bold"> {t("supplierDetail.riyal")}</span>
                       </p>
 
-                      {/* ── Invoice / Share button ── */}
-                          <button
-                              onClick={() => handleShareInvoice(t)}
-                              title={isPay ? "مشاركة سند الاستلام" : "مشاركة الفاتورة"}
-                              className={`shrink-0 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${
-                                isPay
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                                  : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                              }`}
-                        >
-                          🧾
-                        </button>
+                      <button
+                        onClick={() => handleShareInvoice(tItem)}
+                        title={isPay ? t("supplierDetail.shareTooltipPay") : t("supplierDetail.shareTooltipInvoice")}
+                        className={`shrink-0 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${
+                          isPay
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                            : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                        }`}
+                      >
+                        🧾
+                      </button>
 
                     </div>
                   );
@@ -304,11 +299,10 @@ const handleShareInvoice = (t: Transaction) => {
               </div>
             )}
 
-            {/* Legend */}
             <div className="border-t border-slate-50 px-4 sm:px-6 py-2.5 sm:py-3">
               <p className="text-[10px] sm:text-xs text-slate-400 flex items-center gap-1.5">
                 <span>🧾</span>
-                <span>اضغط لمشاركة الفاتورة أو حفظها كـ PDF</span>
+                <span>{t("supplierDetail.shareHint")}</span>
               </p>
             </div>
           </section>
@@ -319,34 +313,35 @@ const handleShareInvoice = (t: Transaction) => {
           <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 md:p-8 shadow-lg sm:shadow-xl shadow-slate-200/70">
             <div className="mb-5 sm:mb-6 text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl sm:rounded-3xl bg-red-50 text-2xl sm:text-3xl">📦</div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-950">تسجيل دين شراء</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-500">سجّل مشترياتك بالدين من هذا المورد</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-950">{t("supplierDetail.debtFormTitle")}</h2>
+              <p className="mt-1 text-xs sm:text-sm text-slate-500">{t("supplierDetail.debtFormSubtitle")}</p>
             </div>
 
             <form onSubmit={handleAddDebt} className="space-y-3 sm:space-y-4 max-w-md mx-auto">
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">المبلغ (ريال) *</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("supplierDetail.amountLabel")}</label>
                 <input
                   type="number" value={debtAmount} onChange={e => setDebtAmount(e.target.value)}
                   required min="1" placeholder="0"
+                  dir="ltr"
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-xl sm:text-2xl font-black text-red-600 outline-none transition-all placeholder:text-slate-300 focus:border-red-400 focus:bg-white focus:ring-4 focus:ring-red-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">وصف البضاعة</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("supplierDetail.goodsDescLabel")}</label>
                 <input
                   type="text" value={debtDesc} onChange={e => setDebtDesc(e.target.value)}
-                  placeholder="مثال: أرز وزيت وسكر"
+                  placeholder={t("supplierDetail.goodsDescPlaceholder")}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-red-400 focus:bg-white focus:ring-4 focus:ring-red-100"
                 />
               </div>
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">موعد السداد</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("supplierDetail.dueDateLabel")}</label>
                 <input
                   type="date" value={debtDueDate} onChange={e => setDebtDueDate(e.target.value)}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-100"
                 />
-                <p className="mt-1 text-[10px] sm:text-xs text-slate-400">سيصلك تذكير قبل الموعد</p>
+                <p className="mt-1 text-[10px] sm:text-xs text-slate-400">{t("supplierDetail.dueDateHint")}</p>
               </div>
               <button
                 type="submit" disabled={savingDebt}
@@ -355,7 +350,7 @@ const handleShareInvoice = (t: Transaction) => {
                 {savingDebt
                   ? <span className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   : "📦"}
-                تسجيل الدين
+                {t("supplierDetail.submitDebt")}
               </button>
             </form>
           </section>
@@ -366,23 +361,24 @@ const handleShareInvoice = (t: Transaction) => {
           <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6 md:p-8 shadow-lg sm:shadow-xl shadow-slate-200/70">
             <div className="mb-5 sm:mb-6 text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl sm:rounded-3xl bg-emerald-50 text-2xl sm:text-3xl">💰</div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-950">تسجيل دفعة للمورد</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-950">{t("supplierDetail.paymentFormTitle")}</h2>
               <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                المتبقي: <span className="font-black text-red-600">{supplier.remaining.toLocaleString("ar-SA")} ريال</span>
+                {t("supplierDetail.remaining")}: <span className="font-black text-red-600">{fmt(supplier.remaining)} {t("supplierDetail.riyal")}</span>
               </p>
             </div>
 
             <form onSubmit={handleAddPayment} className="space-y-3 sm:space-y-4 max-w-md mx-auto">
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">المبلغ المدفوع (ريال) *</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("supplierDetail.paymentAmountLabel")}</label>
                 <input
                   type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)}
                   required min="1" placeholder="0"
+                  dir="ltr"
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-xl sm:text-2xl font-black text-emerald-600 outline-none transition-all placeholder:text-slate-300 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100"
                 />
               </div>
               <div>
-                <p className="mb-1.5 sm:mb-2 text-[10px] sm:text-xs font-bold text-slate-400">مبالغ سريعة</p>
+                <p className="mb-1.5 sm:mb-2 text-[10px] sm:text-xs font-bold text-slate-400">{t("supplierDetail.quickAmounts")}</p>
                 <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
                   {[500, 1000, 2000, 5000].map(q => (
                     <button
@@ -393,16 +389,16 @@ const handleShareInvoice = (t: Transaction) => {
                           : "border border-slate-200 bg-slate-50 text-slate-600 hover:border-emerald-200 hover:bg-emerald-50"
                       }`}
                     >
-                      {q.toLocaleString("ar-SA")}
+                      {fmt(q)}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">ملاحظات</label>
+                <label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-bold text-slate-600">{t("supplierDetail.notesLabel")}</label>
                 <input
                   type="text" value={payNotes} onChange={e => setPayNotes(e.target.value)}
-                  placeholder="اختياري..."
+                  placeholder={t("supplierDetail.notesPlaceholder")}
                   className="w-full rounded-xl sm:rounded-2xl border border-slate-300 bg-slate-50 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base font-medium outline-none transition-all focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100"
                 />
               </div>
@@ -413,7 +409,7 @@ const handleShareInvoice = (t: Transaction) => {
                 {savingPay
                   ? <span className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   : "💰"}
-                تسجيل الدفعة
+                {t("supplierDetail.submitPayment")}
               </button>
             </form>
           </section>

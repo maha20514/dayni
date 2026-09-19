@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { useTranslation, translateApiError } from "@/lib/i18n/LanguageContext";
 
 // ─── OTP Input ────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,6 @@ function OTPInput({
 }) {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  // focus first empty on mount
   useEffect(() => {
     inputsRef.current[0]?.focus();
   }, []);
@@ -94,14 +94,15 @@ function OTPInput({
 // ─── Countdown ────────────────────────────────────────────────────────────────
 
 function Countdown({ seconds, onEnd }: { seconds: number; onEnd: () => void }) {
+  const { t } = useTranslation();
   const [remaining, setRemaining] = useState(seconds);
 
   useEffect(() => { setRemaining(seconds); }, [seconds]);
 
   useEffect(() => {
     if (remaining <= 0) { onEnd(); return; }
-    const t = setTimeout(() => setRemaining(r => r - 1), 1000);
-    return () => clearTimeout(t);
+    const t2 = setTimeout(() => setRemaining(r => r - 1), 1000);
+    return () => clearTimeout(t2);
   }, [remaining, onEnd]);
 
   const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
@@ -122,23 +123,23 @@ function Countdown({ seconds, onEnd }: { seconds: number; onEnd: () => void }) {
       <p className={`text-sm font-bold tabular-nums ${
         remaining > 300 ? "text-slate-500" :
         remaining > 120 ? "text-amber-600"  : "text-red-600"
-      }`}>
-        ينتهي الكود بعد {mins}:{secs}
+      }`} dir="ltr">
+        {t("verifyEmail.expiresIn")} {mins}:{secs}
       </p>
     </div>
   );
 }
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
-
 function VerifyEmailContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
+  const { t, locale } = useTranslation();
+
   const userId   = searchParams.get("userId")   || "";
   const email    = searchParams.get("email")    || "";
   const rawPass  = searchParams.get("_p")       || "";
-  const shopName = searchParams.get("shopName") || "";
 
   const [otp,       setOtp]       = useState(["", "", "", "", "", ""]);
   const [loading,   setLoading]   = useState(false);
@@ -151,7 +152,6 @@ function VerifyEmailContent() {
   const code     = otp.join("");
   const isFilled = code.length === 6;
 
-  // ── Verify ──────────────────────────────────────────────────────────────
   const handleVerify = async (codeToVerify: string) => {
     if (codeToVerify.length !== 6 || loading) return;
 
@@ -159,7 +159,6 @@ function VerifyEmailContent() {
     setError("");
 
     try {
-      // 1️⃣ تحقق من الكود
       const res  = await fetch("/api/auth/verify-otp", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,16 +167,14 @@ function VerifyEmailContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "كود غير صحيح");
+        setError(translateApiError(t, data.error, data.vars) || t("verifyEmail.wrongCode"));
         setOtp(["", "", "", "", "", ""]);
         setLoading(false);
         return;
       }
 
-      // 2️⃣ نجح التحقق — أظهر رسالة النجاح
       setSuccess(true);
 
-      // 3️⃣ سجّل دخول مباشرةً — isVerified الآن true في DB
       if (email && rawPass) {
         const signInResult = await signIn("credentials", {
           redirect:  false,
@@ -186,31 +183,27 @@ function VerifyEmailContent() {
         });
 
         if (signInResult?.ok) {
-          // ✅ نجح — روح للداشبورد
           router.replace("/dashboard");
         } else {
-          // signIn فشل لسبب ما — وجّه للـ login يدوياً
           router.replace("/login?verified=1");
         }
       } else {
-        // ما عندنا بيانات الدخول — وجّه للـ login
         router.replace("/login?verified=1");
       }
 
     } catch {
-      setError("حدث خطأ في الاتصال، حاول مرة أخرى");
+      setError(t("verifyEmail.connectionError"));
       setLoading(false);
     }
   };
 
-  // auto-submit عند اكتمال الأرقام
   useEffect(() => {
     if (isFilled && !loading && !success) {
       handleVerify(code);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
-  // ── Resend ───────────────────────────────────────────────────────────────
   const handleResend = async () => {
     if (!userId || resending) return;
     setResending(true);
@@ -222,25 +215,24 @@ function VerifyEmailContent() {
       await fetch("/api/auth/send-otp", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userId }),
+        body:    JSON.stringify({ userId, preferredLanguage: locale }),
       });
       setTimerKey(k => k + 1);
     } catch {
-      setError("فشل إعادة الإرسال، حاول مرة أخرى");
+      setError(t("verifyEmail.resendFailed"));
     } finally {
       setResending(false);
     }
   };
 
-  // ─── Success ──────────────────────────────────────────────────────────────
   if (success) {
     return (
       <div className="py-6 text-center">
         <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-100 text-5xl">
           ✅
         </div>
-        <h2 className="text-2xl font-black text-emerald-700">تم التحقق بنجاح!</h2>
-        <p className="mt-2 text-slate-500">جاري تسجيل الدخول وتحويلك للوحة التحكم...</p>
+        <h2 className="text-2xl font-black text-emerald-700">{t("verifyEmail.successTitle")}</h2>
+        <p className="mt-2 text-slate-500">{t("verifyEmail.successDesc")}</p>
         <div className="mx-auto mt-5 h-1.5 w-48 overflow-hidden rounded-full bg-slate-200">
           <div className="h-full w-0 animate-[grow_2s_linear_forwards] rounded-full bg-emerald-500" />
         </div>
@@ -248,25 +240,24 @@ function VerifyEmailContent() {
     );
   }
 
-  // ─── Main UI ──────────────────────────────────────────────────────────────
   return (
     <>
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="relative mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50 text-5xl">
           📩
-          <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white ring-2 ring-white">
+          <span className="absolute -end-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white ring-2 ring-white">
             6
           </span>
         </div>
         <span className="mb-3 inline-flex rounded-full bg-blue-50 px-5 py-2 text-sm font-bold text-blue-700">
-          تأكيد البريد الإلكتروني
+          {t("verifyEmail.badge")}
         </span>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">أدخل رمز التحقق</h1>
+        <h1 className="mt-2 text-3xl font-black text-slate-950">{t("verifyEmail.title")}</h1>
         <p className="mt-3 leading-relaxed text-slate-500">
-          أرسلنا رمزاً مكوناً من 6 أرقام إلى
+          {t("verifyEmail.sentTo")}
           <br />
-          <span className="font-bold text-slate-700">{email || "بريدك الإلكتروني"}</span>
+          <span className="font-bold text-slate-700" dir="ltr">{email || t("verifyEmail.yourEmail")}</span>
         </p>
       </div>
 
@@ -280,22 +271,19 @@ function VerifyEmailContent() {
         />
       </div>
 
-      {/* Loading indicator under boxes */}
       {loading && (
         <div className="mb-4 flex items-center justify-center gap-2 text-sm font-bold text-blue-600">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
-          جاري التحقق...
+          {t("verifyEmail.verifying")}
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-center text-sm font-bold text-red-600">
           ⚠️ {error}
         </div>
       )}
 
-      {/* Verify button — fallback لو ما اشتغل auto */}
       <button
         onClick={() => handleVerify(code)}
         disabled={!isFilled || loading}
@@ -303,24 +291,22 @@ function VerifyEmailContent() {
       >
         {loading ? (
           <>
-            <span className="ml-2 h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            جاري التحقق...
+            <span className="me-2 h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            {t("verifyEmail.verifying")}
           </>
-        ) : "تأكيد الرمز ✓"}
+        ) : t("verifyEmail.verifyButton")}
       </button>
 
-      {/* Timer */}
       {!expired && (
         <div className="mb-5">
           <Countdown key={timerKey} seconds={600} onEnd={() => setExpired(true)} />
         </div>
       )}
 
-      {/* Resend */}
       <div className="text-center">
         {expired ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <p className="mb-3 text-sm font-bold text-amber-700">انتهت صلاحية الكود</p>
+            <p className="mb-3 text-sm font-bold text-amber-700">{t("verifyEmail.expired")}</p>
             <button
               onClick={handleResend}
               disabled={resending}
@@ -329,7 +315,7 @@ function VerifyEmailContent() {
               {resending
                 ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 : "🔄"}
-              إرسال كود جديد
+              {t("verifyEmail.resend")}
             </button>
           </div>
         ) : (
@@ -338,24 +324,24 @@ function VerifyEmailContent() {
             disabled={resending}
             className="text-sm font-bold text-blue-600 transition hover:text-blue-700 disabled:opacity-50"
           >
-            {resending ? "جاري الإرسال..." : "لم يصلك الرمز؟ أعد الإرسال"}
+            {resending ? t("verifyEmail.resending") : t("verifyEmail.resendQuestion")}
           </button>
         )}
       </div>
 
       {/* Tips */}
       <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-        <p className="mb-2 text-xs font-bold text-slate-500">لم يصلك الإيميل؟</p>
+        <p className="mb-2 text-xs font-bold text-slate-500">{t("verifyEmail.tipsTitle")}</p>
         <ul className="space-y-1 text-xs text-slate-400">
-          <li>• تحقق من مجلد <strong>Spam / Junk</strong></li>
-          <li>• الكود صالح لمدة <strong>10 دقائق</strong> فقط</li>
-          <li>• تأكد أن الإيميل مكتوب صحيحاً</li>
+          <li>• {t("verifyEmail.tip1")}</li>
+          <li>• {t("verifyEmail.tip2Prefix")} <strong>10</strong> {t("verifyEmail.tip2Suffix")}</li>
+          <li>• {t("verifyEmail.tip3")}</li>
         </ul>
       </div>
 
       <div className="mt-6 text-center">
         <Link href="/register" className="text-sm font-bold text-slate-400 transition hover:text-slate-600">
-          ← العودة للتسجيل
+          {t("verifyEmail.backToRegister")}
         </Link>
       </div>
     </>
@@ -365,10 +351,11 @@ function VerifyEmailContent() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function VerifyEmailPage() {
+  const { dir } = useTranslation();
   return (
-    <main dir="rtl" className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-10">
-      <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-blue-100/70 blur-3xl" />
-      <div className="absolute bottom-20 left-0 h-72 w-72 rounded-full bg-emerald-100/60 blur-3xl" />
+    <main dir={dir} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-10">
+      <div className="absolute end-0 top-20 h-72 w-72 rounded-full bg-blue-100/70 blur-3xl" />
+      <div className="absolute bottom-20 start-0 h-72 w-72 rounded-full bg-emerald-100/60 blur-3xl" />
 
       <style>{`
         @keyframes grow {

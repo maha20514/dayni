@@ -11,34 +11,25 @@ export async function POST(req: NextRequest) {
     const { userId, code } = await req.json();
 
     if (!userId || !code) {
-      return NextResponse.json({ error: "البيانات ناقصة" }, { status: 400 });
+      return NextResponse.json({ error: "MISSING_DATA" }, { status: 400 });
     }
 
     const record = await EmailVerificationToken.findOne({ userId });
 
     if (!record) {
-      return NextResponse.json(
-        { error: "الكود غير موجود أو منتهي الصلاحية، اطلب كوداً جديداً" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "OTP_NOT_FOUND" }, { status: 400 });
     }
 
     // منتهي الصلاحية
     if (record.expiresAt < new Date()) {
       await EmailVerificationToken.deleteOne({ _id: record._id });
-      return NextResponse.json(
-        { error: "انتهت صلاحية الكود، اطلب كوداً جديداً" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "OTP_EXPIRED" }, { status: 400 });
     }
 
     // brute-force protection — max 5 محاولات
     if (record.attempts >= 5) {
       await EmailVerificationToken.deleteOne({ _id: record._id });
-      return NextResponse.json(
-        { error: "تجاوزت عدد المحاولات المسموح بها، اطلب كوداً جديداً" },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "OTP_MAX_ATTEMPTS" }, { status: 429 });
     }
 
     // كود غلط
@@ -48,7 +39,7 @@ export async function POST(req: NextRequest) {
       });
       const remaining = 5 - (record.attempts + 1);
       return NextResponse.json(
-        { error: `الكود غير صحيح — تبقى ${remaining} محاولات` },
+        { error: "OTP_WRONG", vars: { remaining } },
         { status: 400 }
       );
     }
@@ -60,6 +51,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Verify OTP error:", err);
-    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }

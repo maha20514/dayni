@@ -12,32 +12,23 @@ export async function POST(req: NextRequest) {
     const { token, password } = await req.json();
 
     if (!token || !password) {
-      return NextResponse.json({ error: "البيانات ناقصة" }, { status: 400 });
+      return NextResponse.json({ error: "MISSING_DATA" }, { status: 400 });
     }
 
     if (password.length < 6) {
-      return NextResponse.json(
-        { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "PASSWORD_TOO_SHORT" }, { status: 400 });
     }
 
     // جيب الـ member بالـ token
     const member = await TeamMember.findOne({ inviteToken: token });
 
     if (!member) {
-      return NextResponse.json(
-        { error: "رابط الدعوة غير صالح أو منتهي الصلاحية" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "INVITE_INVALID" }, { status: 400 });
     }
 
     // تحقق من انتهاء الصلاحية
     if (member.inviteExpires && member.inviteExpires < new Date()) {
-      return NextResponse.json(
-        { error: "انتهت صلاحية رابط الدعوة، اطلب من صاحب المتجر إرسال دعوة جديدة" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "INVITE_EXPIRED" }, { status: 400 });
     }
 
     // hash الباسوورد
@@ -59,6 +50,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("Accept invite error:", error);
-    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+    return NextResponse.json({ error: "GENERIC_ERROR" }, { status: 500 });
   }
 }

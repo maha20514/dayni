@@ -6,16 +6,16 @@ import Providers from "./providers";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "  Dayni |نظام إدارة الديون",
-  description: "إدارة العملاء والفواتير والمدفوعات",
+  title: "Dayni | دَيني — Debt Management",
+  description: "Manage customers, invoices, and payments — إدارة العملاء والفواتير والمدفوعات",
   verification: {
     google: "05qEdS1wg3nsHrVNvblj7F6I_BqApzxwk6zgmMyWd0A",
   },
-   icons: {
-    icon: "/icon.svg",           
+  icons: {
+    icon: "/icon.svg",
     apple: "/icon.svg",
   },
-   keywords: [
+  keywords: [
     "dayni",
     "ديني",
     "نظام إدارة الديون",
@@ -29,10 +29,14 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // NOTE: lang/dir start as "ar"/"rtl" for the first paint (matches the
+  // app's historical default) and are then synced client-side by
+  // <LanguageProvider> to the user's stored/browser preference.
+  // suppressHydrationWarning avoids a false-positive warning for that
+  // intentional, one-time client-side correction.
   return (
-    <html lang="ar" dir="rtl">
-      <body className="bg-slate-50 min-h-screen flex flex-col">
-        
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <body className="bg-slate-50 min-h-screen flex flex-col" suppressHydrationWarning>
         <Providers>
           <Navbar />
 
@@ -43,7 +47,6 @@ export default function RootLayout({
 
           <Footer />
         </Providers>
-
       </body>
     </html>
   );
