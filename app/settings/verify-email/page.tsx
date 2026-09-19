@@ -131,6 +131,9 @@ function Countdown({ seconds, onEnd }: { seconds: number; onEnd: () => void }) {
 }
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
+function VerifyEmailContent() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const { t, locale } = useTranslation();
 
