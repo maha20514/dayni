@@ -213,8 +213,8 @@ export default function Navbar() {
             <Link href="/home" className="flex items-center gap-2 sm:gap-3">
               <Image src="/logo.png" alt={t("common.appName")} width={80} height={80} className="h-14 sm:h-16 lg:h-20 w-auto object-contain" priority />
               <div>
-                <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-950">{t("common.appName")}</h1>
-                <p className="-mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">{t("common.tagline")}</p>
+                {/* <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-950">{t("common.appName")}</h1> */}
+                {/* <p className="-mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">{t("common.tagline")}</p> */}
               </div>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
