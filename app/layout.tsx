@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Providers from "./providers";
 import { Toaster } from "sonner";
+import NativeBridge from "./components/NativeBridge";
 
 export const metadata: Metadata = {
   title: "Dayni | دَيني — Debt Management",
@@ -24,6 +25,13 @@ export const metadata: Metadata = {
   ],
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover", // lets safe-area insets work on notched phones
+  themeColor: "#0f172a",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -38,6 +46,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className="bg-slate-50 min-h-screen flex flex-col" suppressHydrationWarning>
         <Providers>
+          <NativeBridge />
           <Navbar />
 
           <main className="flex-1 container mx-auto py-8 px-6">

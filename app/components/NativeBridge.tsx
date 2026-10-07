@@ -1,0 +1,68 @@
+"use client";
+
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Runs only inside the Capacitor shell (iOS/Android); a no-op on the web.
+export default function NativeBridge() {
+  const { status } = useSession();
+
+  // Push registration once the user is signed in.
+  useEffect(() => {
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.() || status !== "authenticated") return;
+    let cleanup: (() => void) | undefined;
+
+    (async () => {
+      const { PushNotifications } = await import("@capacitor/push-notifications");
+      const perm = await PushNotifications.requestPermissions();
+      if (perm.receive !== "granted") return;
+      const reg = await PushNotifications.addListener("registration", async ({ value }) => {
+        await fetch("/api/devices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: value, platform: cap.getPlatform() }),
+        });
+      });
+      const tap = await PushNotifications.addListener("pushNotificationActionPerformed", () => {
+        window.location.href = "/notifications";
+      });
+      await PushNotifications.register();
+      cleanup = () => { reg.remove(); tap.remove(); };
+    })().catch(console.error);
+
+    return () => cleanup?.();
+  }, [status]);
+
+  // Android back button + external links (wa.me, tel:, mailto:, other hosts).
+  useEffect(() => {
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+    let remove: (() => void) | undefined;
+
+    (async () => {
+      const { App } = await import("@capacitor/app");
+      const h = await App.addListener("backButton", ({ canGoBack }) => {
+        if (canGoBack) window.history.back(); else App.exitApp();
+      });
+      remove = () => h.remove();
+    })().catch(console.error);
+
+    const onClick = async (e: MouseEvent) => {
+      const a = (e.target as HTMLElement).closest("a") as HTMLAnchorElement | null;
+      if (!a?.href || a.target === "_self") return;
+      const url = new URL(a.href, location.href);
+      const internal = url.origin === location.origin;
+      if (internal) return;
+      e.preventDefault();
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: url.href });
+    };
+    document.addEventListener("click", onClick, true);
+
+    return () => { remove?.(); document.removeEventListener("click", onClick, true); };
+  }, []);
+
+  return null;
+}

@@ -247,3 +247,9 @@ html[dir="ltr"] .i18n-mirror {
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* Safe areas for notched phones when running inside the native shell */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}

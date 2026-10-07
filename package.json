@@ -7,9 +7,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios",
+    "cap:assets": "capacitor-assets generate --iconBackgroundColor #ffffff --splashBackgroundColor #f8fafc"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/browser": "^7.0.0",
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/ios": "^7.4.0",
+    "@capacitor/push-notifications": "^7.0.0",
+    "firebase-admin": "^13.0.0",
     "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "@stripe/stripe-js": "^9.4.0",
     "@types/nodemailer": "^8.0.0",
@@ -32,6 +43,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
