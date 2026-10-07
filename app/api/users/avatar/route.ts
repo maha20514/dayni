@@ -2,15 +2,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { getApiOwner } from "@/lib/apiAuth";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await getApiOwner(req);
+    if (!auth) {
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
     await connectDB();
 
-    const { userId, avatar } = await req.json();
+    const { avatar } = await req.json();
+    const userId = auth.ownerId; // never trust a client-supplied userId
 
-    if (!userId || !avatar) {
-      return NextResponse.json({ error: "userId و avatar مطلوبان" }, { status: 400 });
+    if (!avatar) {
+      return NextResponse.json({ error: "avatar مطلوب" }, { status: 400 });
     }
 
     const user = await User.findByIdAndUpdate(

@@ -2,10 +2,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { PaymentRequest } from "@/models/PaymentRequest";
+import { isAdminSecret } from "@/lib/apiAuth";
 import { User } from "@/models/User";
 import { getToken } from "next-auth/jwt";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "dayni-admin-2026";
 
 export async function PATCH(
   req: NextRequest,
@@ -19,7 +19,7 @@ export async function PATCH(
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
     const isAdmin =
-      adminHeader === ADMIN_SECRET ||
+      isAdminSecret(adminHeader) ||
       (token as any)?.role === "admin";
 
     if (!isAdmin) {
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     const adminHeader = req.headers.get("x-admin-secret");
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     const isAdmin =
-      adminHeader === ADMIN_SECRET ||
+      isAdminSecret(adminHeader) ||
       (token as any)?.role === "admin";
 
     if (!isAdmin) {

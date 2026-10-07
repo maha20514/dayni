@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Customer } from "@/models/Customer";
 import { Invoice } from "@/models/Invoice";
 import { Payment } from "@/models/Payment";
+import { getApiOwner } from "@/lib/apiAuth";
 
 export async function GET(
   req: NextRequest,
@@ -11,14 +12,19 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    
-    const { id } = await params;   
+
+    const auth = await getApiOwner(req);
+    if (!auth) {
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json({ error: "CUSTOMER_ID_REQUIRED" }, { status: 400 });
     }
 
-    const customer = await Customer.findById(id).lean();
+    const customer = await Customer.findOne({ _id: id, userId: auth.ownerId }).lean();
     if (!customer) {
       return NextResponse.json({ error: "CUSTOMER_NOT_FOUND" }, { status: 404 });
     }
@@ -44,13 +50,22 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+
+    const auth = await getApiOwner(req);
+    if (!auth) {
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+    if (auth.isMember && auth.memberRole !== "admin") {
+      return NextResponse.json({ error: "NO_PERMISSION" }, { status: 403 });
+    }
+
     const { id } = await params;
 
     if (!id) {
       return NextResponse.json({ error: "CUSTOMER_ID_REQUIRED" }, { status: 400 });
     }
 
-    const customer = await Customer.findById(id);
+    const customer = await Customer.findOne({ _id: id, userId: auth.ownerId });
     if (!customer) {
       return NextResponse.json({ error: "CUSTOMER_NOT_FOUND" }, { status: 404 });
     }
