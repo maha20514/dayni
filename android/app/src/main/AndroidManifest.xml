@@ -27,8 +27,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!--<data android:scheme="app.dayni.mobile" /> -->
-                <data android:scheme="http://192.168.100.13:3000" />
+                <data android:scheme="app.dayni.mobile" />
             </intent-filter>
 
         </activity>
