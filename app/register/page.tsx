@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { googleSignIn } from "@/lib/nativeAuth";
 import { useTranslation, translateApiError } from "@/lib/i18n/LanguageContext";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -157,7 +158,9 @@ export default function RegisterPage() {
 
   const handleGoogle = async () => {
     setGLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
+    await googleSignIn();
+    // Native: the system browser opened, so the page stays — stop the spinner.
+    setGLoading(false);
   };
 
   return (

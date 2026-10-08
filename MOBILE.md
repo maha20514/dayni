@@ -25,3 +25,21 @@ Flow: `NativeBridge` registers the token -> `POST /api/devices` -> `createNotifi
 - **Apple guideline 4.2**: add a biometric lock (`@capgo/capacitor-native-biometric`) so the app is more than a website wrapper.
 - Privacy policy URL + account deletion in-app (Apple requirement).
 - Security fixes noted in review (unauthenticated/userId-trusting API routes, hardcoded ADMIN_SECRET fallback).
+
+## Google sign-in in the app (system browser + one-time code)
+Flow: app opens `/mobile-auth` in the system browser -> Google -> `/api/mobile-auth/complete`
+issues a 60 s single-use code -> redirects to `app.dayni.mobile://auth?code=…` -> `NativeBridge`
+catches it and calls `signIn("mobile-code")` inside the WebView.
+
+Native one-time setup (the scheme must be registered or the app won't reopen):
+- **Android** `android/app/src/main/AndroidManifest.xml`, inside the main `<activity>`:
+  ```xml
+  <intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="app.dayni.mobile" />
+  </intent-filter>
+  ```
+- **iOS** `ios/App/App/Info.plist`: add `CFBundleURLTypes` with `CFBundleURLSchemes` = `app.dayni.mobile`.
+Then `npx cap sync`. This only works once the site changes are deployed to dayni.app.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Runs only inside the Capacitor shell (iOS/Android); a no-op on the web.
@@ -46,7 +46,15 @@ export default function NativeBridge() {
       const h = await App.addListener("backButton", ({ canGoBack }) => {
         if (canGoBack) window.history.back(); else App.exitApp();
       });
-      remove = () => h.remove();
+      // Google sign-in finished in the system browser -> app.dayni.mobile://auth?code=...
+      const u = await App.addListener("appUrlOpen", async ({ url }) => {
+        const parsed = new URL(url);
+        const code = parsed.searchParams.get("code");
+        if (parsed.protocol !== "app.dayni.mobile:" || !code) return;
+        try { (await import("@capacitor/browser")).Browser.close(); } catch {}
+        await signIn("mobile-code", { code, callbackUrl: "/dashboard" });
+      });
+      remove = () => { h.remove(); u.remove(); };
     })().catch(console.error);
 
     const onClick = async (e: MouseEvent) => {

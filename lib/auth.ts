@@ -6,6 +6,8 @@ import { connectDB } from "./mongodb";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 import { TeamMember } from "@/models/Teammember";
+import { MobileAuthCode } from "@/models/MobileAuthCode";
+import crypto from "crypto";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -52,6 +54,35 @@ export const authOptions: NextAuthOptions = {
           image:        user.avatar || null,
           plan:         user.plan         || "free",
           maxCustomers: user.maxCustomers  || 10,
+          isActive:     user.isActive,
+        };
+      },
+    }),
+
+    // Finishes a native-app Google sign-in: exchanges the one-time code that
+    // /api/mobile-auth/complete issued (single use, 60 s) for a normal session.
+    CredentialsProvider({
+      id: "mobile-code",
+      name: "Mobile Code",
+      credentials: { code: { type: "text" } },
+      async authorize(credentials) {
+        if (!credentials?.code) return null;
+        await connectDB();
+        const codeHash = crypto.createHash("sha256").update(credentials.code).digest("hex");
+        const entry = await MobileAuthCode.findOneAndDelete({
+          codeHash,
+          expiresAt: { $gt: new Date() },
+        });
+        if (!entry) return null;
+        const user = await User.findById(entry.userId);
+        if (!user || !user.isActive) return null;
+        return {
+          id:           user._id.toString(),
+          name:         user.shopName,
+          email:        user.email,
+          image:        user.avatar || null,
+          plan:         user.plan || "free",
+          maxCustomers: user.maxCustomers || 10,
           isActive:     user.isActive,
         };
       },
