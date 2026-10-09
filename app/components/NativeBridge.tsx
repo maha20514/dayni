@@ -1,12 +1,51 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Runs only inside the Capacitor shell (iOS/Android); a no-op on the web.
 export default function NativeBridge() {
   const { status } = useSession();
+  const [splash, setSplash] = useState<"gone" | "show" | "fade">("gone");
+
+  // Status bar: dark icons on a white bar, content below it (not underneath).
+  useEffect(() => {
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+    (async () => {
+      const { StatusBar, Style } = await import("@capacitor/status-bar");
+      await StatusBar.setStyle({ style: Style.Light });
+      if (cap.getPlatform() === "android") {
+        await StatusBar.setBackgroundColor({ color: "#ffffff" });
+        await StatusBar.setOverlaysWebView({ overlay: false });
+      }
+    })().catch(() => {});
+  }, []);
+
+  // Animated splash: the static native splash hands over to this overlay once
+  // it has painted, then the overlay fades out.
+  useEffect(() => {
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+    // Play once per app launch, not on every full page load (sign-in redirects etc.).
+    let played = false;
+    try { played = sessionStorage.getItem("dayni-splash") === "1"; sessionStorage.setItem("dayni-splash", "1"); } catch {}
+    if (played) {
+      import("@capacitor/splash-screen").then(({ SplashScreen }) => SplashScreen.hide()).catch(() => {});
+      return;
+    }
+    setSplash("show");
+    (async () => {
+      const { SplashScreen } = await import("@capacitor/splash-screen");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => SplashScreen.hide({ fadeOutDuration: 200 }))
+      );
+    })().catch(() => {});
+    const t1 = setTimeout(() => setSplash("fade"), 1800);
+    const t2 = setTimeout(() => setSplash("gone"), 2200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
 
   // Push registration once the user is signed in.
   useEffect(() => {
@@ -76,5 +115,30 @@ export default function NativeBridge() {
     return () => { remove?.(); document.removeEventListener("click", onClick, true); };
   }, []);
 
-  return null;
+  if (splash === "gone") return null;
+  return (
+    <div className={`ds-splash ${splash === "fade" ? "ds-splash-out" : ""}`} aria-hidden="true">
+      <style>{`
+        .ds-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8fafc;transition:opacity .4s ease}
+        .ds-splash-out{opacity:0;pointer-events:none}
+        .ds-stage{position:relative;width:24vh;max-width:70vw;aspect-ratio:1}
+        .ds-ring{position:absolute;inset:-6%;border-radius:50%;border:3px solid rgba(6,120,255,.35);animation:ds-ripple 1.8s ease-out infinite}
+        .ds-ring.b{animation-delay:.9s}
+        .ds-mark{position:relative;width:100%;height:100%;object-fit:contain;animation:ds-breathe 1.8s ease-in-out infinite}
+        .ds-word{margin-top:6vh;font-size:28px;font-weight:800;letter-spacing:.5px;color:#0f172a;opacity:0;animation:ds-word .7s .3s ease-out forwards}
+        @keyframes ds-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+        @keyframes ds-ripple{0%{transform:scale(.7);opacity:.7}100%{transform:scale(1.7);opacity:0}}
+        @keyframes ds-word{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+        @media (prefers-color-scheme:dark){.ds-splash{background:#0f172a}.ds-word{color:#fff}}
+        @media (prefers-reduced-motion:reduce){.ds-mark,.ds-ring{animation:none}}
+      `}</style>
+      <div className="ds-stage">
+        <span className="ds-ring" />
+        <span className="ds-ring b" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="ds-mark" src="/splash-mark.png" alt="" />
+      </div>
+      <div className="ds-word">دَيني</div>
+    </div>
+  );
 }
