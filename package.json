@@ -11,7 +11,7 @@
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
-    "cap:assets": "capacitor-assets generate --iconBackgroundColor #ffffff --splashBackgroundColor #f8fafc"
+    "cap:assets": "capacitor-assets generate --iconBackgroundColor #ffffff --iconBackgroundColorDark #0f172a --splashBackgroundColor #f8fafc --splashBackgroundColorDark #0f172a"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",
@@ -20,6 +20,7 @@
     "@capacitor/core": "^7.4.0",
     "@capacitor/ios": "^7.4.0",
     "@capacitor/push-notifications": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
     "firebase-admin": "^13.0.0",
     "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "@stripe/stripe-js": "^9.4.0",
