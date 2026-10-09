@@ -12,6 +12,10 @@ export default function NativeBridge() {
   useEffect(() => {
     const cap = (window as any).Capacitor;
     if (!cap?.isNativePlatform?.() || status !== "authenticated") return;
+    // Push needs Firebase (google-services.json / APNs) set up in the native
+    // project; calling register() without it crashes the app on Android.
+    // Set NEXT_PUBLIC_PUSH_ENABLED=true only once that setup is done.
+    if (process.env.NEXT_PUBLIC_PUSH_ENABLED !== "true") return;
     let cleanup: (() => void) | undefined;
 
     (async () => {

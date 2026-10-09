@@ -17,6 +17,7 @@ npm run cap:ios          # opens Xcode
 1. Create a Firebase project; add Android app `app.dayni.mobile` -> put `google-services.json` in `android/app/`.
 2. iOS: add iOS app, put `GoogleService-Info.plist` in Xcode, upload an APNs key in Firebase, enable Push Notifications + Background Modes capabilities.
 3. Server: set `FIREBASE_SERVICE_ACCOUNT` (service-account JSON as one string) in Vercel.
+4. Only then set `NEXT_PUBLIC_PUSH_ENABLED=true` (Vercel + rebuild). Without it the app skips push registration; calling it with no Firebase config crashes Android.
 Flow: `NativeBridge` registers the token -> `POST /api/devices` -> `createNotification()` also calls `sendPushToUser()`.
 
 ## Still to do before store submission
