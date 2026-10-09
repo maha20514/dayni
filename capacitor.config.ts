@@ -6,12 +6,17 @@ const config: CapacitorConfig = {
   appId: "app.dayni.mobile",
   appName: "دَيني",
   webDir: "public", // required by Capacitor; unused while server.url is set
-  server: {
+  /* server: {
     url: "https://dayni.app",
     cleartext: false,
     // Keep Google sign-in / checkout in the system browser, everything else in-app.
     allowNavigation: ["dayni.app", "*.dayni.app"],
-  },
+  }, */
+  server: {
+  url: "https://preview.dayni.app",
+  cleartext: false,
+  allowNavigation: ["dayni.app", "*.dayni.app"],
+},
   ios: { contentInset: "always" },
   android: { allowMixedContent: false },
   plugins: {
