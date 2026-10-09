@@ -16,7 +16,11 @@ const config: CapacitorConfig = {
   ios: { contentInset: "always" },
   android: { allowMixedContent: false },
   plugins: {
-    SplashScreen: { launchShowDuration: 1500, backgroundColor: "#f8fafc" },
+    // Native splash stays until the web app mounts and hides it (see NativeBridge);
+    // 6 s is only a safety net if the page can't load.
+    SplashScreen: { launchShowDuration: 6000, launchAutoHide: true, launchFadeOutDuration: 200, backgroundColor: "#f8fafc" },
+    // Dark status-bar icons on the light header (like other apps).
+    StatusBar: { style: "LIGHT", backgroundColor: "#ffffff", overlaysWebView: false },
     PushNotifications: { presentationOptions: ["badge", "sound", "alert"] },
   },
 };
