@@ -44,3 +44,10 @@ Native one-time setup (the scheme must be registered or the app won't reopen):
   ```
 - **iOS** `ios/App/App/Info.plist`: add `CFBundleURLTypes` with `CFBundleURLSchemes` = `app.dayni.mobile`.
 Then `npx cap sync`. This only works once the site changes are deployed to dayni.app.
+
+## Store compliance added
+- **Account deletion:** `/settings/delete-account` (linked in the footer) + `DELETE /api/users/account`
+  (password for email accounts, typed email for Google accounts). Use this URL in Play Console's
+  "Delete account" web link field.
+- **No in-app purchases UI:** inside the native shell, `/pricing*` and `/settings/billing*` links are hidden
+  (`.native-app` CSS class) and direct visits redirect to `/dashboard`.

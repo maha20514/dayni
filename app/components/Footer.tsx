@@ -34,6 +34,7 @@ export default function Footer() {
     { href: "/settings/privacy", label: t("footer.privacy") },
     { href: "/settings/refund",  label: t("footer.refund") },
     { href: "/support",          label: t("footer.support") },
+    { href: "/settings/delete-account", label: t("footer.deleteAccount") },
   ];
 
   return (

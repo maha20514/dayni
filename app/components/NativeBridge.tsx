@@ -2,11 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Runs only inside the Capacitor shell (iOS/Android); a no-op on the web.
 export default function NativeBridge() {
   const { status } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Native app: no purchasing/subscription screens (store payment policies).
+  // Hides upgrade links via the .native-app CSS class and bounces direct visits.
+  useEffect(() => {
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+    document.documentElement.classList.add("native-app");
+    if (pathname?.startsWith("/pricing") || pathname?.startsWith("/settings/billing")) {
+      router.replace("/dashboard");
+    }
+  }, [pathname, router]);
   const [splash, setSplash] = useState<"gone" | "show" | "fade">("gone");
 
   // Status bar: dark icons on a white bar, content below it (not underneath).
