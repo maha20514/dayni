@@ -17,8 +17,7 @@ export async function GET(
     }
 
     const invoice = await Invoice.findById(id)
-    .populate("customerId")
-    .populate("userId");;
+      .populate("customerId", "name phone");
 
     if (!invoice) {
       return NextResponse.json({ error: "الفاتورة غير موجودة" }, { status: 404 });
@@ -28,6 +27,7 @@ export async function GET(
 
     return NextResponse.json({
       ...invoice.toObject(),
+      userId: undefined, // never expose the owner's account record
       customer: customer || { name: "غير محدد", phone: "غير محدد" }
     });
 

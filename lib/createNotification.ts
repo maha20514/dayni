@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import { Notification } from "@/models/Notification";
+import { sendPushToUser } from "@/lib/push";
 
 export async function createNotification({
   userId,
@@ -16,7 +17,7 @@ export async function createNotification({
 }) {
   await connectDB();
 
-  return await Notification.create({
+  const created = await Notification.create({
     userId,
     customerId,
     title,
@@ -24,4 +25,9 @@ export async function createNotification({
     type,
     isRead: false,
   });
+
+  // Fire-and-forget native push; never blocks or fails the caller.
+  void sendPushToUser(userId, title, message);
+
+  return created;
 }

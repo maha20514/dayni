@@ -7,21 +7,29 @@ import { User } from "@/models/User";
 import { createNotification } from "@/lib/createNotification";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { getToken } from "next-auth/jwt";
+import { getApiOwner } from "@/lib/apiAuth";
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
+    const auth = await getApiOwner(req);
+    if (!auth) {
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+    // Never trust a client-supplied userId — always the signed-in owner.
+    const userId = auth.ownerId;
+
     const body = await req.json();
 
-    const { userId, customerId, amount } = body;
+    const { customerId, amount } = body;
 
-    if (!userId || !customerId || !amount || amount <= 0) {
+    if (! !customerId || !amount || amount <= 0) {
       return NextResponse.json({ error: "MISSING_DATA" }, { status: 400 });
     }
 
     const customer = await Customer.findById(customerId);
-    if (!customer) {
+    if (!customer || String(customer.userId) !== String(userId)) {
       return NextResponse.json({ error: "CUSTOMER_NOT_FOUND" }, { status: 404 });
     }
 

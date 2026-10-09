@@ -2,13 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { PaymentRequest } from "@/models/PaymentRequest";
+import { isAdminSecret } from "@/lib/apiAuth";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "dayni-admin-2026";
 
 export async function GET(req: NextRequest) {
   try {
     const adminHeader = req.headers.get("x-admin-secret");
-    if (adminHeader !== ADMIN_SECRET) {
+    if (!isAdminSecret(adminHeader)) {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     }
 
