@@ -11,7 +11,7 @@
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
-    "cap:assets": "capacitor-assets generate --iconBackgroundColor #ffffff --splashBackgroundColor #f8fafc"
+    "cap:assets": "capacitor-assets generate --iconBackgroundColor #ffffff --iconBackgroundColorDark #0f172a --splashBackgroundColor #f8fafc --splashBackgroundColorDark #0f172a"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",

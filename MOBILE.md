@@ -7,7 +7,7 @@ The native app is a shell that loads https://dayni.app (see `capacitor.config.ts
 npm install
 npx cap add android
 npx cap add ios          # Mac only
-npm run cap:assets       # needs resources/icon.png (1024²) + resources/splash.png (2732²)
+npm run cap:assets       # builds icons + splash from assets/ (already included)
 npx cap sync
 npm run cap:android      # opens Android Studio
 npm run cap:ios          # opens Xcode
