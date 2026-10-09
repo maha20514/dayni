@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     const { customerId, amount, description } = body;
 
-    if (! !customerId || !amount || amount <= 0 || !description) {
+    if (!customerId || !amount || amount <= 0 || !description) {
       return NextResponse.json({ error: "MISSING_DATA" }, { status: 400 });
     }
 
