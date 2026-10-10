@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
+import { FREE_SUPPLIER_LIMIT } from "@/lib/limits";
 
 interface SupplierType {
   _id:       string;
@@ -37,6 +38,8 @@ export default function SuppliersPage() {
   const [company, setCompany] = useState("");
   const [notes,   setNotes]   = useState("");
   const [saving,  setSaving]  = useState(false);
+  const currentPlan = (session?.user as any)?.plan || "free";
+  const limitReached = currentPlan === "free" && suppliers.length >= FREE_SUPPLIER_LIMIT;
 
   useEffect(() => {
     if (status === "loading") return;
@@ -68,7 +71,15 @@ export default function SuppliersPage() {
         body:    JSON.stringify({ name, phone, company, notes }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        if (data.error === "SUPPLIER_LIMIT_REACHED") {
+          toast.error(t("suppliers.limitToastError"));
+          setShowAdd(false);
+          fetchSuppliers();
+          return;
+        }
+        throw new Error(data.error);
+      }
       toast.success(t("suppliers.addSuccess"));
       setShowAdd(false);
       setName(""); setPhone(""); setCompany(""); setNotes("");
@@ -167,14 +178,36 @@ export default function SuppliersPage() {
                 </p>
               </div>
               <button
-                onClick={() => setShowAdd(true)}
-                className="inline-flex items-center justify-center rounded-xl sm:rounded-2xl bg-amber-500 px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-1 hover:bg-amber-600"
+                onClick={() => {
+                  if (limitReached) { toast.error(t("suppliers.limitToastError")); return; }
+                  setShowAdd(true);
+                }}
+                className={`inline-flex items-center justify-center rounded-xl sm:rounded-2xl px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold shadow-lg transition-all ${limitReached ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" : "bg-amber-500 text-white shadow-amber-500/25 hover:-translate-y-1 hover:bg-amber-600"}`}
               >
                 {t("suppliers.addButton")} <span className="ms-1 sm:ms-2 text-lg sm:text-xl">+</span>
               </button>
             </div>
           </div>
         </section>
+
+        {/* PLAN LIMIT ALERT */}
+        {limitReached && (
+          <section className="mb-5 sm:mb-8 rounded-2xl sm:rounded-[2rem] border border-red-200 bg-red-50 p-4 sm:p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-red-700">{t("suppliers.limitReachedTitle")}</p>
+                <p className="mt-1 text-xs sm:text-sm font-semibold text-red-600">{t("suppliers.limitReachedDesc")}</p>
+                <p className="show-in-app mt-2 text-xs sm:text-sm font-bold text-red-700">{t("common.upgradeOnWebsite")}</p>
+              </div>
+              <button
+                onClick={() => router.push("/pricing/checkout?plan=basic")}
+                className="hide-in-app rounded-xl sm:rounded-2xl bg-red-600 px-5 sm:px-8 py-3 sm:py-4 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:-translate-y-1 hover:bg-red-700 whitespace-nowrap"
+              >
+                {t("customers.upgradeNow")}
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* STATS */}
         <section className="mb-5 sm:mb-8 grid gap-3 sm:gap-5 grid-cols-3">
@@ -330,7 +363,10 @@ export default function SuppliersPage() {
               <p className="text-base sm:text-lg font-bold text-slate-700">{t("suppliers.emptyTitle")}</p>
               <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500">{t("suppliers.emptyDesc")}</p>
               <button
-                onClick={() => setShowAdd(true)}
+                onClick={() => {
+                  if (limitReached) { toast.error(t("suppliers.limitToastError")); return; }
+                  setShowAdd(true);
+                }}
                 className="mt-4 sm:mt-6 inline-flex rounded-xl sm:rounded-2xl bg-amber-500 px-6 sm:px-8 py-3 sm:py-4 text-sm font-bold text-white transition hover:bg-amber-600"
               >
                 {t("suppliers.addNow")}

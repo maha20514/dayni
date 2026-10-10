@@ -237,10 +237,11 @@ export default function CustomersPage() {
               <div>
                 <p className="text-sm sm:text-base lg:text-lg font-bold text-red-700">{t("customers.limitReachedTitle")}</p>
                 <p className="mt-1 text-xs sm:text-sm font-semibold text-red-600">{t("customers.limitReachedDesc")}</p>
+                <p className="show-in-app mt-2 text-xs sm:text-sm font-bold text-red-700">{t("common.upgradeOnWebsite")}</p>
               </div>
               <button
                 onClick={() => router.push("/pricing/checkout?plan=basic")}
-                className="rounded-xl sm:rounded-2xl bg-red-600 px-5 sm:px-8 py-3 sm:py-4 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:-translate-y-1 hover:bg-red-700 whitespace-nowrap"
+                className="hide-in-app rounded-xl sm:rounded-2xl bg-red-600 px-5 sm:px-8 py-3 sm:py-4 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:-translate-y-1 hover:bg-red-700 whitespace-nowrap"
               >
                 {t("customers.upgradeNow")}
               </button>

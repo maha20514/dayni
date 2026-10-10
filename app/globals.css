@@ -272,3 +272,8 @@ body {
   z-index: 99998;
   pointer-events: none;
 }
+
+/* Upgrade UI: shown on the website, replaced by a plain note inside the native app. */
+.show-in-app { display: none; }
+.native-app .show-in-app { display: block; }
+.native-app .hide-in-app { display: none !important; }
