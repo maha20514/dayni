@@ -1,6 +1,7 @@
 // app/api/lemonsqueezy/create-checkout/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+import { getApiOwner } from "@/lib/apiAuth";
 import {
   lemonSqueezySetup,
   createCheckout,
@@ -12,7 +13,13 @@ lemonSqueezySetup({
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, userId } = await req.json();
+    const auth = await getApiOwner(req);
+    if (!auth || auth.isMember) {
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+    // The buyer is always the signed-in owner, never an id sent by the client.
+    const userId = auth.ownerId;
+    const { plan } = await req.json();
 
     const variantMap: Record<string, number> = {
       basic: Number(process.env.LEMON_BASIC_VARIANT_ID),

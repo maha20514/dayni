@@ -22,6 +22,24 @@ function getMaxCustomers(plan: string) {
   return 10;
 }
 
+
+async function downgrade(subId: string) {
+  await User.findOneAndUpdate(
+    { lemonSubscriptionId: subId },
+    { plan: "free", maxCustomers: 10, isActive: false, subscriptionEnd: new Date() }
+  );
+}
+
+// A cancelled subscription stays usable until the end of the period already paid for.
+async function endOrScheduleEnd(subId: string, endsAt?: string | null) {
+  const end = endsAt ? new Date(endsAt) : null;
+  if (end && end.getTime() > Date.now()) {
+    await User.findOneAndUpdate({ lemonSubscriptionId: subId }, { subscriptionEnd: end });
+  } else {
+    await downgrade(subId);
+  }
+}
+
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get("x-signature");
@@ -48,55 +66,36 @@ export async function POST(req: NextRequest) {
   const customData = payload?.meta?.custom_data || {};
   const attributes = payload?.data?.attributes || {};
 
-  // ✅ LemonSqueezy ترجع المفاتيح بصيغة snake_case دائماً
-  const userId = customData.user_id;
+  // custom_data keys come back exactly as sent by create-checkout (camelCase);
+  // also accept snake_case for older checkouts.
+  const userId = customData.userId || customData.user_id;
   const plan = customData.plan;
 
   console.log("📩 LemonSqueezy event:", eventName, "| userId:", userId, "| plan:", plan);
 
-  // ── اشتراك جديد / طلب جديد ──────────────────────────────
+  // ── اشتراك جديد / طلب جديد (يشمل الفترة التجريبية on_trial) ─────────
   if (eventName === "order_created" || eventName === "subscription_created") {
-    if (!userId || !plan) {
-      console.error("❌ Missing userId or plan in custom_data", customData);
+    if (!userId || !["basic", "pro"].includes(plan)) {
+      console.error("❌ Missing/invalid userId or plan in custom_data", customData);
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
 
-    const maxCustomers = getMaxCustomers(plan);
-
-    const updated = await User.findByIdAndUpdate(
-  userId,
-  {
-    plan,
-    isActive: true,
-    subscriptionStart: new Date(),
-    lemonCustomerId: attributes.customer_id || null,
-    lemonSubscriptionId:
-      eventName === "subscription_created" ? payload.data.id : undefined,
-  },
-  { new: true }
-);
-
-if (!updated) {
-  console.error("❌ User not found in DB:", userId);
-  return NextResponse.json({ error: "User not found" }, { status: 404 });
-}
-
-// 🔍 DEBUG: اطبع المستند الفعلي المُرجَع من MongoDB
-console.log("🔍 Returned doc from DB:", JSON.stringify({
-  _id: updated._id,
-  plan: updated.plan,
-  isActive: updated.isActive,
-  lemonSubscriptionId: updated.lemonSubscriptionId,
-}));
-
-console.log(`✅ Subscription activated — userId: ${userId}, plan: ${plan}`);
+    const update: Record<string, unknown> = {
+      plan,
+      maxCustomers: getMaxCustomers(plan),
+      isActive: true,
+      subscriptionStart: new Date(),
+      lemonCustomerId: attributes.customer_id || null,
+    };
+    if (eventName === "subscription_created") update.lemonSubscriptionId = payload.data.id;
+    // Don't let a later order_created wipe the subscription id.
+    const updated = await User.findByIdAndUpdate(userId, update, { new: true });
 
     if (!updated) {
       console.error("❌ User not found in DB:", userId);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-
-    console.log(`✅ Subscription activated — userId: ${userId}, plan: ${plan}`);
+    console.log(`✅ Subscription activated — userId: ${userId}, plan: ${plan}, event: ${eventName}`);
   }
 
   // ── تحديث الاشتراك (تجديد/تغيير) ─────────────────────────
@@ -104,42 +103,25 @@ console.log(`✅ Subscription activated — userId: ${userId}, plan: ${plan}`);
     const status = attributes.status; // active, on_trial, cancelled, expired, past_due, unpaid, paused...
     const subId = payload.data.id;
 
-    // ✅ on_trial يُعتبر فعّالاً مثل active — المستخدم في فترة تجريبية لكنه يستخدم الميزات
     if (["active", "on_trial"].includes(status)) {
-      await User.findOneAndUpdate(
-        { lemonSubscriptionId: subId },
-        { isActive: true }
-      );
-    } else if (["cancelled", "expired", "unpaid", "past_due"].includes(status)) {
-      await User.findOneAndUpdate(
-        { lemonSubscriptionId: subId },
-        {
-          plan: "free",
-          maxCustomers: 10,
-          isActive: false,
-          subscriptionEnd: new Date(),
-        }
-      );
+      await User.findOneAndUpdate({ lemonSubscriptionId: subId }, { isActive: true });
+    } else if (status === "cancelled") {
+      await endOrScheduleEnd(subId, attributes.ends_at);
+    } else if (["expired", "unpaid", "past_due"].includes(status)) {
+      await downgrade(subId);
     }
 
     console.log(`ℹ️ Subscription updated — subId: ${subId}, status: ${status}`);
   }
 
-  // ── إلغاء / انتهاء الاشتراك ──────────────────────────────
-  if (eventName === "subscription_cancelled" || eventName === "subscription_expired") {
-    const subId = payload.data.id;
-
-    await User.findOneAndUpdate(
-      { lemonSubscriptionId: subId },
-      {
-        plan: "free",
-        maxCustomers: 10,
-        isActive: false,
-        subscriptionEnd: new Date(),
-      }
-    );
-
-    console.log("❌ Subscription cancelled/expired — subId:", subId);
+  // ── إلغاء: يبقى مفعّلاً حتى نهاية الفترة المدفوعة / انتهاء ─────────
+  if (eventName === "subscription_cancelled") {
+    await endOrScheduleEnd(payload.data.id, attributes.ends_at);
+    console.log("ℹ️ Subscription cancelled — subId:", payload.data.id);
+  }
+  if (eventName === "subscription_expired") {
+    await downgrade(payload.data.id);
+    console.log("❌ Subscription expired — subId:", payload.data.id);
   }
 
   return NextResponse.json({ received: true });
