@@ -1,5 +1,6 @@
 {
   "common": {
+    "upgradeOnWebsite": "To raise the limit, sign in to your account on our website, dayni.app, and change your plan there.",
     "appName": "Dayni",
     "tagline": "Debt Management System",
     "riyal": "SAR",
@@ -141,7 +142,7 @@
     "free": {
       "name": "Free",
       "desc": "Great for getting started and trying the system",
-      "f1": "Manage up to 10 customers",
+      "f1": "Manage up to 10 customers and 5 suppliers",
       "f2": "Track debts and payments",
       "f3": "Follow each customer's balance",
       "f4": "Easy Arabic & English interface",
@@ -150,7 +151,7 @@
     "basic": {
       "name": "Basic",
       "desc": "Best for small shop owners",
-      "f1": "Unlimited customers",
+      "f1": "Unlimited customers and suppliers",
       "f2": "Unlimited debts and payments",
       "f3": "Clear, detailed reports",
       "f4": "Data export",
@@ -595,6 +596,9 @@
     "nameRequired": "Supplier name is required",
     "addSuccess": "Supplier added successfully",
     "addFailed": "Failed to add",
+    "limitReachedTitle": "You've reached the supplier limit",
+    "limitReachedDesc": "The free plan allows up to 5 suppliers. Upgrade to add unlimited suppliers.",
+    "limitToastError": "You've reached the free plan limit (5 suppliers).",
     "loadingTitle": "Loading suppliers..."
   },
   "supplierDetail": {
@@ -1070,11 +1074,11 @@
     "subscribeNow": "Subscribe now",
     "free": {
       "name": "Free", "desc": "Great for getting started and trying the system",
-      "f1": "Manage up to 10 customers", "f2": "Track debts and payments", "f3": "Follow each customer's balance", "f4": "Easy Arabic & English interface"
+      "f1": "Manage up to 10 customers and 5 suppliers", "f2": "Track debts and payments", "f3": "Follow each customer's balance", "f4": "Easy Arabic & English interface"
     },
     "basic": {
       "name": "Basic", "desc": "Best for small shop owners",
-      "f1": "Unlimited customers", "f2": "Unlimited debts and payments", "f3": "Clear, detailed reports", "f4": "Data export", "f5": "Fast support"
+      "f1": "Unlimited customers and suppliers", "f2": "Unlimited debts and payments", "f3": "Clear, detailed reports", "f4": "Data export", "f5": "Fast support"
     },
     "pro": {
       "name": "Pro", "desc": "For shops that need advanced features",
@@ -1101,7 +1105,7 @@
     "back": "Back",
     "checkoutFailed": "Failed to start checkout",
     "connectionError": "Connection error, please try again",
-    "basic": { "name": "Basic Plan", "label": "Most popular", "desc": "Great for small shop owners who want to manage their debts easily.", "f1": "Unlimited customers", "f2": "Track debts and payments", "f3": "Clear reports", "f4": "Data export" },
+    "basic": { "name": "Basic Plan", "label": "Most popular", "desc": "Great for small shop owners who want to manage their debts easily.", "f1": "Unlimited customers and suppliers", "f2": "Track debts and payments", "f3": "Clear reports", "f4": "Data export" },
     "pro": { "name": "Pro Plan", "label": "Advanced features", "desc": "For shops that need more advanced tools and better analytics.", "f1": "Everything in Basic", "f2": "Smart notifications", "f3": "Multiple users", "f4": "Advanced analytics" }
   },
   "billingSuccess": {
@@ -1194,7 +1198,7 @@
     "heroCard1Label": "Built for shops",
     "heroCard1Title": "Easy, fast Arabic & English interface",
     "heroCard2Label": "Starts free",
-    "heroF1": "Manage up to 10 customers",
+    "heroF1": "Manage up to 10 customers and 5 suppliers",
     "heroF2": "Track debts and payments",
     "heroF3": "Follow your balance easily",
     "copyright": "© 2026 Dayni - Smart Debt Management System"
