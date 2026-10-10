@@ -164,7 +164,8 @@ export const authOptions: NextAuthOptions = {
     },
 
     // ── JWT ─────────────────────────────────────
-   async jwt({ token, user, trigger }) {
+   async jwt({ token, user, trigger, account }) {
+  if (account?.provider) token.provider = account.provider;
   if (user) {
 
     // ✅ تحقق من isMember أولاً قبل أي شيء
