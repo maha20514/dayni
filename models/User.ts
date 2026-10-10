@@ -14,6 +14,8 @@ export interface IUser extends Document {
   isActive: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  lemonCustomerId?: string | null;
+  lemonSubscriptionId?: string | null;
   provider: "credentials" | "google";
   isVerified: boolean;
   /** UI language the user registered/last used — drives which language
@@ -66,7 +68,18 @@ const UserSchema = new Schema({
     type: Boolean,
     default: true
   },
-  stripeCustomerId: {
+  lemonCustomerId: {
+  type: String,
+  default: null,
+},
+
+lemonSubscriptionId: {
+  type: String,
+  default: null,
+  index: true,
+},
+
+stripeCustomerId: {
   type: String,
   default: null,
 },
