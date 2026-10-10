@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
+import NativeSplash from "./NativeSplash";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Runs only inside the Capacitor shell (iOS/Android); a no-op on the web.
@@ -23,15 +24,15 @@ export default function NativeBridge() {
   }, [pathname, router]);
   const [splash, setSplash] = useState<"gone" | "show" | "fade">("gone");
 
-  // Status bar: dark icons on a white bar, content below it (not underneath).
+  // Status bar: brand-blue bar with light icons (always visible, like other apps).
   useEffect(() => {
     const cap = (window as any).Capacitor;
     if (!cap?.isNativePlatform?.()) return;
     (async () => {
       const { StatusBar, Style } = await import("@capacitor/status-bar");
-      await StatusBar.setStyle({ style: Style.Light });
+      await StatusBar.setStyle({ style: Style.Dark });
       if (cap.getPlatform() === "android") {
-        await StatusBar.setBackgroundColor({ color: "#ffffff" });
+        await StatusBar.setBackgroundColor({ color: "#0033D7" });
         await StatusBar.setOverlaysWebView({ overlay: false });
       }
     })().catch(() => {});
@@ -56,8 +57,8 @@ export default function NativeBridge() {
         requestAnimationFrame(() => SplashScreen.hide({ fadeOutDuration: 200 }))
       );
     })().catch(() => {});
-    const t1 = setTimeout(() => setSplash("fade"), 1800);
-    const t2 = setTimeout(() => setSplash("gone"), 2200);
+    const t1 = setTimeout(() => setSplash("fade"), 3000);
+    const t2 = setTimeout(() => setSplash("gone"), 3500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
@@ -130,29 +131,5 @@ export default function NativeBridge() {
   }, []);
 
   if (splash === "gone") return null;
-  return (
-    <div className={`ds-splash ${splash === "fade" ? "ds-splash-out" : ""}`} aria-hidden="true">
-      <style>{`
-        .ds-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8fafc;transition:opacity .4s ease}
-        .ds-splash-out{opacity:0;pointer-events:none}
-        .ds-stage{position:relative;width:24vh;max-width:70vw;aspect-ratio:1}
-        .ds-ring{position:absolute;inset:-6%;border-radius:50%;border:3px solid rgba(6,120,255,.35);animation:ds-ripple 1.8s ease-out infinite}
-        .ds-ring.b{animation-delay:.9s}
-        .ds-mark{position:relative;width:100%;height:100%;object-fit:contain;animation:ds-breathe 1.8s ease-in-out infinite}
-        .ds-word{margin-top:6vh;font-size:28px;font-weight:800;letter-spacing:.5px;color:#0f172a;opacity:0;animation:ds-word .7s .3s ease-out forwards}
-        @keyframes ds-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
-        @keyframes ds-ripple{0%{transform:scale(.7);opacity:.7}100%{transform:scale(1.7);opacity:0}}
-        @keyframes ds-word{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-        @media (prefers-color-scheme:dark){.ds-splash{background:#0f172a}.ds-word{color:#fff}}
-        @media (prefers-reduced-motion:reduce){.ds-mark,.ds-ring{animation:none}}
-      `}</style>
-      <div className="ds-stage">
-        <span className="ds-ring" />
-        <span className="ds-ring b" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="ds-mark" src="/splash-mark.png" alt="" />
-      </div>
-      <div className="ds-word">دَيني</div>
-    </div>
-  );
+  return <NativeSplash fading={splash === "fade"} />;
 }

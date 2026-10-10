@@ -260,3 +260,15 @@ body {
 .native-app a[href^="/settings/billing"] {
   display: none !important;
 }
+
+/* Native app: solid brand strip behind the system status bar so clock/battery/
+   notification icons stay visible (Android 15 forces edge-to-edge). */
+.native-app body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: #0033D7;
+  z-index: 99998;
+  pointer-events: none;
+}

@@ -6,6 +6,7 @@ export type ApiOwner = {
   ownerId: string;
   isMember: boolean;
   memberRole: string | null;
+  viaGoogle: boolean; // signed in with Google (directly or through the mobile app flow)
 };
 
 // Resolves the signed-in shop owner (team members resolve to their owner's id).
@@ -17,6 +18,7 @@ export async function getApiOwner(req: NextRequest): Promise<ApiOwner | null> {
     ownerId,
     isMember: !!(token as any).isMember,
     memberRole: ((token as any).memberRole as string) || null,
+    viaGoogle: ["google", "mobile-code"].includes((token as any).provider),
   };
 }
 

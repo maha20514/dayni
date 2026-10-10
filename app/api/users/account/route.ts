@@ -27,7 +27,8 @@ export async function GET(req: NextRequest) {
   await connectDB();
   const user = await User.findById(auth.ownerId).select("password");
   if (!user) return NextResponse.json({ error: "USER_NOT_FOUND" }, { status: 404 });
-  return NextResponse.json({ requires: user.password ? "password" : "email" });
+  // Google sessions confirm with the account email; email/password sessions with the password.
+  return NextResponse.json({ requires: !auth.viaGoogle && user.password ? "password" : "email" });
 }
 
 // Permanently deletes the signed-in owner's account and everything under it.
@@ -48,7 +49,7 @@ export async function DELETE(req: NextRequest) {
     const { password, confirmEmail } = await req.json().catch(() => ({}));
 
     // Re-authenticate: password for email accounts, typed email for Google accounts.
-    if (user.password) {
+    if (!auth.viaGoogle && user.password) {
       if (!password || !(await bcrypt.compare(String(password), user.password))) {
         return NextResponse.json({ error: "WRONG_PASSWORD" }, { status: 403 });
       }

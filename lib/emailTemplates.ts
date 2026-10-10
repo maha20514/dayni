@@ -10,7 +10,7 @@ import nodemailer from "nodemailer";
 
 type Lang = "ar" | "en";
 
-function getTransporter() {
+function gmailTransporter() {
   return nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -18,6 +18,38 @@ function getTransporter() {
       pass: process.env.GMAIL_APP_PASSWORD,
     },
   });
+}
+
+type MailOpts = { from: string; to: string; subject: string; html: string; text?: string; replyTo?: string };
+
+// Sends through Resend (fast, authenticated with SPF/DKIM on dayni.app) when
+// RESEND_API_KEY is set; falls back to Gmail SMTP if it is unset or fails.
+async function sendViaResend(o: MailOpts) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM || o.from,
+      to: [o.to],
+      subject: o.subject,
+      html: o.html,
+      text: o.text,
+      reply_to: o.replyTo,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text().catch(() => "")}`);
+}
+
+export function getTransporter() {
+  return {
+    async sendMail(o: MailOpts) {
+      if (process.env.RESEND_API_KEY) {
+        try { return await sendViaResend(o); }
+        catch (err) { console.error("Resend failed, falling back to Gmail:", err); }
+      }
+      return gmailTransporter().sendMail(o);
+    },
+  };
 }
 
 const FROM_NAME: Record<Lang, string> = { ar: "دَيني", en: "Dayni" };
