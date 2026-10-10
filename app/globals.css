@@ -253,3 +253,10 @@ body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Native app (Play/App Store): no in-app upgrade or subscription UI.
+   The class is set by an inline script in layout.tsx and by NativeBridge. */
+.native-app a[href^="/pricing"],
+.native-app a[href^="/settings/billing"] {
+  display: none !important;
+}

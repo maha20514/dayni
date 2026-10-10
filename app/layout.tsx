@@ -44,6 +44,14 @@ export default function RootLayout({
   // intentional, one-time client-side correction.
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <head>
+        {/* Mark the document early when running inside the native app shell. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform())document.documentElement.classList.add("native-app")}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="bg-slate-50 min-h-screen flex flex-col" suppressHydrationWarning>
         <Providers>
           <NativeBridge />
