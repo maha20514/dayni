@@ -36,8 +36,8 @@ export default function NativeSplash({ fading }: { fading: boolean }) {
         <svg viewBox="400 330 1350 1330" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="dsg" gradientUnits="userSpaceOnUse" x1="420.917" y1="1426.96" x2="1534.36" y2="513.348">
-		<stop class="stop0" offset="0" stop-opacity="1" stop-color="rgb(0,51,215)"/>
-		<stop class="stop1" offset="1" stop-opacity="1" stop-color="rgb(6,120,255)"/>
+		<stop offset="0" stopOpacity="1" stopColor="rgb(0,51,215)"/>
+		<stop offset="1" stopOpacity="1" stopColor="rgb(6,120,255)"/>
 	</linearGradient>
             <clipPath id="dsc"><path d={BODY} /></clipPath>
             <linearGradient id="dss" x1="0" y1="0" x2="1" y2="0">
