@@ -15,6 +15,7 @@ import * as XLSX from "xlsx";
 import { getPermissions } from "@/lib/permissions";
 import { toast } from "sonner";
 import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
+import { saveWorkbook } from "@/lib/saveFile";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement, BarElement);
 
@@ -220,7 +221,7 @@ export default function ReportsPage() {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, t("reports.title"));
-    XLSX.writeFile(wb, `report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    void saveWorkbook(XLSX, wb, `report_${new Date().toISOString().slice(0, 10)}.xlsx`);
     setExportLoading(false);
     toast.info(t("reports.exportToastSuccess"));
   };

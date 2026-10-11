@@ -11,6 +11,7 @@ import { useSession } from "next-auth/react";
 import { hasFeature } from "@/lib/permissions";
 import { toast } from "sonner";
 import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
+import { saveWorkbook } from "@/lib/saveFile";
 
 interface CustomerType {
   _id: string;
@@ -100,7 +101,7 @@ export default function CustomersPage() {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, t("customers.title"));
-    XLSX.writeFile(wb, `customers_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    void saveWorkbook(XLSX, wb, `customers_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const openWhatsApp = (phone: string, name: string, debt: number) => {

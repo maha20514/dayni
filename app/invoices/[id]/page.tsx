@@ -7,6 +7,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslation, formatNumber } from "@/lib/i18n/LanguageContext";
+import { saveBlob } from "@/lib/saveFile";
+import { isNativeApp } from "@/lib/nativeAuth";
 
 export default function InvoicePrintPage() {
   const params    = useParams();
@@ -95,10 +97,10 @@ export default function InvoicePrintPage() {
       pdf.addImage(dataUrl, "PNG", 0, 0, imgW, imgH);
 
       const fileName = `invoice-${invoice._id?.slice(-6)}.pdf`;
-      pdf.save(fileName);
+      await saveBlob(pdf.output("blob"), fileName);
 
       const blob = pdf.output("blob");
-      if (navigator.canShare?.({ files: [new File([blob], fileName, { type: "application/pdf" })] })) {
+      if (!isNativeApp() && navigator.canShare?.({ files: [new File([blob], fileName, { type: "application/pdf" })] })) {
         await navigator.share({ title: t("print.invoiceNumber"), files: [new File([blob], fileName, { type: "application/pdf" })] });
       }
     } catch (err) {
