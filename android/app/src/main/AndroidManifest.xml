@@ -27,7 +27,7 @@
                 <data android:scheme="app.dayni.mobile" />
             </intent-filter>
         </activity>
-
+    
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
