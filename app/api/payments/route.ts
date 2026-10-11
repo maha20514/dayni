@@ -5,7 +5,8 @@ import { Payment } from "@/models/Payment";
 import { Customer } from "@/models/Customer";
 import { User } from "@/models/User";
 import { createNotification } from "@/lib/createNotification";
-import { sendWhatsApp } from "@/lib/whatsapp";
+import { sendWhatsApp, waParam } from "@/lib/whatsapp";
+import { hasFeature } from "@/lib/permissions";
 import { getToken } from "next-auth/jwt";
 import { getApiOwner } from "@/lib/apiAuth";
 
@@ -57,11 +58,19 @@ export async function POST(req: NextRequest) {
     });
 
     // ── WhatsApp notification — sent to the customer, always in Arabic ──
-    if (customer.phone) {
+    const owner = await User.findById(userId).select("plan shopName");
+    if (customer.phone && owner && hasFeature(owner.plan, "notifications")) {
       const receiptLink = `${process.env.NEXT_PUBLIC_SITE_URL}/payments/${payment._id}`;
 
       const waResult = await sendWhatsApp({
         to: customer.phone,
+        kind: "payment",
+        params: [
+          waParam(customer.name),
+          waParam(Number(amount).toLocaleString("en-US")),
+          waParam(owner.shopName),
+          receiptLink,
+        ],
         message: `مرحباً ${customer.name} 👋
  
 ✅ تأكيد استلام دفعة
@@ -80,8 +89,6 @@ ${receiptLink}
       if (!waResult.success) {
         console.warn("⚠️ WhatsApp failed for payment", payment._id, "| Reason:", waResult.error);
       }
-    } else {
-      console.warn("⚠️ Customer has no phone:", customer.name);
     }
 
     return NextResponse.json(payment, { status: 201 });

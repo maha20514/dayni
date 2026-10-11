@@ -8,12 +8,14 @@ export async function createNotification({
   title,
   message,
   type,
+  reminderLevel,
 }: {
   userId: string;
   customerId?: string;
   title: string;
   message: string;
   type: string;
+  reminderLevel?: number;
 }) {
   await connectDB();
 
@@ -24,6 +26,7 @@ export async function createNotification({
     message,
     type,
     isRead: false,
+    ...(reminderLevel !== undefined ? { reminderLevel } : {}),
   });
 
   // Fire-and-forget native push; never blocks or fails the caller.
