@@ -239,3 +239,118 @@ export async function sendTeamInviteEmail({
     html: wrapper(lang, "linear-gradient(135deg,#2563eb,#4f46e5)", "👥", copy.title, copy.subtitle, bodyHtml),
   }).catch(err => console.error("Invite email error:", err));
 }
+
+// ─── Welcome (after the account is verified / Google sign-up) ───────────────
+
+const SITE = () => process.env.NEXT_PUBLIC_SITE_URL || "https://dayni.app";
+
+function button(href: string, label: string) {
+  return `<p style="text-align:center;margin:28px 0;"><a href="${href}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:14px 32px;border-radius:14px;">${label}</a></p>`;
+}
+
+export async function sendWelcomeEmail({
+  to, shopName, preferredLanguage = "ar",
+}: { to: string; shopName: string; preferredLanguage?: Lang }) {
+  const lang = preferredLanguage;
+  const copy = lang === "ar"
+    ? {
+        subject: "أهلاً بك في دَيني 🎉 ابدأ في 3 خطوات",
+        title: "أهلاً بك في دَيني",
+        subtitle: "تم تأكيد حسابك بنجاح",
+        intro: `مرحباً <strong>${shopName}</strong>، يسعدنا انضمامك! دَيني يساعدك تسجّل ديون عملائك وتتابع التحصيل بسهولة، من الجوال ومن الموقع.`,
+        stepsTitle: "ابدأ في 3 خطوات",
+        steps: [
+          "أضف أول عميل (الاسم ورقم الجوال)",
+          "سجّل دين عليه كفاتورة، وشارك رابط الفاتورة أو ملف PDF",
+          "سجّل الدفعات وتابع المتبقي على كل عميل لحظياً",
+        ],
+        more: "وتقدر تستخدم أيضاً: إدارة الموردين، تقارير التحصيل، وإضافة فريق عمل بصلاحيات مختلفة.",
+        plan: "حسابك الحالي مجاني ويتيح حتى 10 عملاء و5 موردين. للترقية إلى عملاء وموردين غير محدودين وتذكيرات واتساب تلقائية، ادخل على dayni.app وغيّر الباقة من هناك.",
+        cta: "افتح دَيني",
+        help: "عندك سؤال؟ ردّ على هذا الإيميل أو راسلنا على support@dayni.app",
+        text: `أهلاً بك في دَيني!\n\nابدأ في 3 خطوات:\n1) أضف أول عميل\n2) سجّل دين عليه كفاتورة\n3) سجّل الدفعات وتابع المتبقي\n\n${SITE()}/dashboard\n\n— فريق دَيني`,
+      }
+    : {
+        subject: "Welcome to Dayni 🎉 Get started in 3 steps",
+        title: "Welcome to Dayni",
+        subtitle: "Your account is verified",
+        intro: `Hi <strong>${shopName}</strong>, great to have you! Dayni helps you record customer debts and follow up on collections, from your phone or the web.`,
+        stepsTitle: "Get started in 3 steps",
+        steps: [
+          "Add your first customer (name and phone number)",
+          "Record a debt for them as an invoice and share the invoice link or PDF",
+          "Record payments and see each customer's remaining balance instantly",
+        ],
+        more: "You can also manage suppliers, view collection reports, and add team members with different permissions.",
+        plan: "Your free plan includes up to 10 customers and 5 suppliers. To get unlimited customers and suppliers and automatic WhatsApp reminders, sign in at dayni.app and change your plan there.",
+        cta: "Open Dayni",
+        help: "Questions? Reply to this email or write to support@dayni.app",
+        text: `Welcome to Dayni!\n\nGet started in 3 steps:\n1) Add your first customer\n2) Record a debt as an invoice\n3) Record payments and track the balance\n\n${SITE()}/dashboard\n\n— The Dayni team`,
+      };
+
+  const stepsHtml = copy.steps.map((t, i) =>
+    `<tr><td style="vertical-align:top;padding:6px 0;width:34px;"><div style="width:26px;height:26px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:900;font-size:13px;text-align:center;line-height:26px;">${i + 1}</div></td><td style="padding:6px 0;color:#334155;font-size:14px;line-height:1.7;">${t}</td></tr>`
+  ).join("");
+
+  const bodyHtml = `
+    <p style="margin:0 0 20px;color:#475569;font-size:15px;line-height:1.7;">${copy.intro}</p>
+    <p style="margin:0 0 8px;color:#0f172a;font-size:15px;font-weight:800;">${copy.stepsTitle}</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:16px;">${stepsHtml}</table>
+    <p style="margin:0 0 16px;color:#64748b;font-size:13px;line-height:1.7;">${copy.more}</p>
+    ${button(`${SITE()}/dashboard`, copy.cta)}
+    <div style="background:#f1f5f9;border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+      <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7;">${copy.plan}</p>
+    </div>
+    <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.7;">${copy.help}</p>`;
+
+  await getTransporter().sendMail({
+    from:    `"${FROM_NAME[lang]}" <${process.env.SUPPORT_EMAIL || "support@dayni.app"}>`,
+    replyTo: process.env.SUPPORT_EMAIL || "support@dayni.app",
+    to,
+    subject: copy.subject,
+    html: wrapper(lang, "linear-gradient(135deg,#2563eb,#4f46e5)", "🎉", copy.title, copy.subtitle, bodyHtml),
+    text: copy.text,
+  });
+}
+
+// ─── Reminder to verify the email (attempt 1 = after ~1 day, 2 = last one) ───
+
+export async function sendVerifyReminderEmail({
+  to, shopName, attempt, preferredLanguage = "ar",
+}: { to: string; shopName: string; attempt: 1 | 2; preferredLanguage?: Lang }) {
+  const lang = preferredLanguage;
+  const last = attempt === 2;
+  const copy = lang === "ar"
+    ? {
+        subject: last ? "تذكير أخير: فعّل حسابك في دَيني" : "باقي خطوة واحدة لتفعيل حسابك في دَيني",
+        title: last ? "تذكير أخير" : "فعّل حسابك",
+        subtitle: "بريدك الإلكتروني لم يُؤكَّد بعد",
+        body: `مرحباً <strong>${shopName}</strong>، سجّلت في دَيني لكن بريدك الإلكتروني ما زال غير مؤكد، ولا تقدر تستخدم حسابك قبل التأكيد.<br/><br/>سجّل دخولك الآن وسنرسل لك رمز تحقق جديد خلال لحظات.${last ? "<br/><br/>هذا آخر تذكير نرسله لك." : ""}`,
+        cta: "تسجيل الدخول وتأكيد الحساب",
+        ignore: "إذا لم تسجّل في دَيني، تجاهل هذا الإيميل.",
+        text: `سجّلت في دَيني لكن بريدك لم يُؤكَّد بعد. سجّل دخولك لنرسل لك رمز تحقق جديد: ${SITE()}/login`,
+      }
+    : {
+        subject: last ? "Last reminder: activate your Dayni account" : "One step left to activate your Dayni account",
+        title: last ? "Last reminder" : "Activate your account",
+        subtitle: "Your email hasn't been verified yet",
+        body: `Hi <strong>${shopName}</strong>, you signed up for Dayni but your email is still unverified, so you can't use your account yet.<br/><br/>Sign in now and we'll send you a new verification code in a moment.${last ? "<br/><br/>This is the last reminder we'll send." : ""}`,
+        cta: "Sign in and verify",
+        ignore: "If you didn't sign up for Dayni, you can ignore this email.",
+        text: `You signed up for Dayni but your email isn't verified yet. Sign in and we'll send you a new code: ${SITE()}/login`,
+      };
+
+  const bodyHtml = `
+    <p style="margin:0;color:#475569;font-size:15px;line-height:1.8;">${copy.body}</p>
+    ${button(`${SITE()}/login`, copy.cta)}
+    <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.7;">${copy.ignore}</p>`;
+
+  await getTransporter().sendMail({
+    from:    `"${FROM_NAME[lang]}" <${process.env.SUPPORT_EMAIL || "support@dayni.app"}>`,
+    replyTo: process.env.SUPPORT_EMAIL || "support@dayni.app",
+    to,
+    subject: copy.subject,
+    html: wrapper(lang, "linear-gradient(135deg,#f59e0b,#ea580c)", "⏰", copy.title, copy.subtitle, bodyHtml),
+    text: copy.text,
+  });
+}

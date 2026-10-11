@@ -18,6 +18,9 @@ export interface IUser extends Document {
   lemonSubscriptionId?: string | null;
   provider: "credentials" | "google";
   isVerified: boolean;
+  welcomeSentAt?: Date | null;
+  verifyReminderCount?: number;
+  lastVerifyReminderAt?: Date | null;
   /** UI language the user registered/last used — drives which language
    *  transactional emails (OTP, password reset, team invites) are sent in. */
   preferredLanguage: "ar" | "en";
@@ -97,6 +100,9 @@ isVerified: {
   type: Boolean,
   default: false,   
 },
+welcomeSentAt: { type: Date, default: null },
+verifyReminderCount: { type: Number, default: 0 },
+lastVerifyReminderAt: { type: Date, default: null },
 preferredLanguage: {
   type: String,
   enum: ["ar", "en"],

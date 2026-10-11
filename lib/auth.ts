@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { TeamMember } from "@/models/Teammember";
 import { MobileAuthCode } from "@/models/MobileAuthCode";
 import crypto from "crypto";
+import { sendWelcomeEmail } from "./emailTemplates";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -149,7 +150,7 @@ export const authOptions: NextAuthOptions = {
         await connectDB();
         const existing = await User.findOne({ email: user.email });
         if (!existing) {
-          await User.create({
+          const created = await User.create({
             shopName:  user.name || "متجري",
             email:     user.email,
             password:  null,
@@ -157,7 +158,15 @@ export const authOptions: NextAuthOptions = {
             plan:      "free",
             maxCustomers: 10,
             isActive:  true,
+            provider:  "google",
+            isVerified: true,      // Google already verified the email
+            welcomeSentAt: new Date(),
           });
+          await sendWelcomeEmail({
+            to: created.email,
+            shopName: created.shopName,
+            preferredLanguage: "ar",
+          }).catch((e) => console.error("Welcome email failed:", e));
         }
       }
       return true;
