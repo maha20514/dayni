@@ -8,7 +8,7 @@ import NativeSplash from "./NativeSplash";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Runs only inside the Capacitor shell (iOS/Android); a no-op on the web.
 export default function NativeBridge() {
-  const { status } = useSession();
+  const { status, update } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -61,6 +61,25 @@ export default function NativeBridge() {
     const t2 = setTimeout(() => setSplash("gone"), 3500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  // Re-read the plan/profile from the DB whenever the app comes back to the
+  // foreground (e.g. after paying on the website), so no sign-out is needed.
+  useEffect(() => {
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.() || status !== "authenticated") return;
+    let remove: (() => void) | undefined;
+    (async () => {
+      const { App } = await import("@capacitor/app");
+      const h = await App.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) update().catch(() => {});
+      });
+      remove = () => h.remove();
+    })().catch(() => {});
+    const onVisible = () => { if (document.visibilityState === "visible") update().catch(() => {}); };
+    document.addEventListener("visibilitychange", onVisible);
+    update().catch(() => {});
+    return () => { remove?.(); document.removeEventListener("visibilitychange", onVisible); };
+  }, [status, update]);
 
   // Push registration once the user is signed in.
   useEffect(() => {
