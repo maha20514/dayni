@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import NativeSplash from "./NativeSplash";
@@ -64,22 +64,32 @@ export default function NativeBridge() {
 
   // Re-read the plan/profile from the DB whenever the app comes back to the
   // foreground (e.g. after paying on the website), so no sign-out is needed.
+  // `update` changes identity on every session refresh, so it lives in a ref;
+  // depending on it directly would re-run this effect in an endless loop.
+  const updateRef = useRef(update);
+  updateRef.current = update;
+  const lastRefresh = useRef(0);
   useEffect(() => {
     const cap = (window as any).Capacitor;
     if (!cap?.isNativePlatform?.() || status !== "authenticated") return;
+    const refresh = () => {
+      const now = Date.now();
+      if (now - lastRefresh.current < 5000) return; // throttle
+      lastRefresh.current = now;
+      updateRef.current().catch(() => {});
+    };
     let remove: (() => void) | undefined;
     (async () => {
       const { App } = await import("@capacitor/app");
       const h = await App.addListener("appStateChange", ({ isActive }) => {
-        if (isActive) update().catch(() => {});
+        if (isActive) refresh();
       });
       remove = () => h.remove();
     })().catch(() => {});
-    const onVisible = () => { if (document.visibilityState === "visible") update().catch(() => {}); };
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
     document.addEventListener("visibilitychange", onVisible);
-    update().catch(() => {});
     return () => { remove?.(); document.removeEventListener("visibilitychange", onVisible); };
-  }, [status, update]);
+  }, [status]);
 
   // Push registration once the user is signed in.
   useEffect(() => {
