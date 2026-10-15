@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { EmailVerificationToken } from "@/models/EmailVerificationToken";
+import { sendWelcomeEmail } from "@/lib/emailTemplates";
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +48,20 @@ export async function POST(req: NextRequest) {
     // ✅ صحيح — حدّث المستخدم
     await User.findByIdAndUpdate(userId, { isVerified: true });
     await EmailVerificationToken.deleteOne({ _id: record._id });
+
+    // Welcome email — claimed atomically so it is sent only once.
+    const claimed = await User.findOneAndUpdate(
+      { _id: userId, welcomeSentAt: null },
+      { welcomeSentAt: new Date() },
+      { new: true }
+    );
+    if (claimed) {
+      await sendWelcomeEmail({
+        to: claimed.email,
+        shopName: claimed.shopName,
+        preferredLanguage: claimed.preferredLanguage || "ar",
+      }).catch((e) => console.error("Welcome email failed:", e));
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

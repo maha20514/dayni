@@ -147,6 +147,9 @@ export default function RegisterPage() {
       const params = new URLSearchParams({
         userId: data.userId,
       });
+      // If the first code could not be sent, the verify page re-sends it automatically.
+      if (data.email) params.set("email", data.email);
+      if (data.otpSent === false) params.set("resend", "1");
       router.push(`/settings/verify-email?${params.toString()}`);
 
     } catch {

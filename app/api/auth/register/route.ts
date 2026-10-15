@@ -65,15 +65,22 @@ export async function POST(req: NextRequest) {
       preferredLanguage: lang,
     });
 
-    // ── Send OTP — لا ننتظره يكمل قبل ما نرد ──
-    sendVerificationOTP(
-      newUser._id.toString(),
-      newUser.email,
-      newUser.shopName,
-      lang
-    ).catch(err => console.error("OTP send error (background):", err));
+    // ── Send OTP — يجب انتظاره: على Vercel تتوقف الدالة بعد إرسال الرد، فالإرسال
+    // بالخلفية (بدون await) كان يضيع، وهذا سبب أن الرمز ما يوصل من أول تسجيل. ──
+    let otpSent = true;
+    try {
+      await sendVerificationOTP(
+        newUser._id.toString(),
+        newUser.email,
+        newUser.shopName,
+        lang
+      );
+    } catch (err) {
+      otpSent = false;
+      console.error("OTP send error:", err);
+    }
 
-    // ── رد فوري للمستخدم ──
+    // ── الرد للمستخدم ──
     return NextResponse.json({
       success:      true,
       userId:       newUser._id.toString(),
@@ -82,6 +89,7 @@ export async function POST(req: NextRequest) {
       plan:         newUser.plan,
       maxCustomers: newUser.maxCustomers,
       isVerified:   false,
+      otpSent,
     }, { status: 201 });
 
   } catch (error: any) {

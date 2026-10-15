@@ -204,6 +204,16 @@ function VerifyEmailContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
+  // The register API couldn't send the first code -> send it right away.
+  const autoResent = useRef(false);
+  useEffect(() => {
+    if (searchParams.get("resend") === "1" && userId && !autoResent.current) {
+      autoResent.current = true;
+      handleResend();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleResend = async () => {
     if (!userId || resending) return;
     setResending(true);
@@ -212,11 +222,15 @@ function VerifyEmailContent() {
     setOtp(["", "", "", "", "", ""]);
 
     try {
-      await fetch("/api/auth/send-otp", {
+      const res = await fetch("/api/auth/send-otp", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ userId, preferredLanguage: locale }),
       });
+      if (!res.ok) {
+        setError(t("verifyEmail.resendFailed"));
+        return;
+      }
       setTimerKey(k => k + 1);
     } catch {
       setError(t("verifyEmail.resendFailed"));

@@ -162,7 +162,7 @@
       "name": "Pro",
       "desc": "For shops that need advanced features",
       "f1": "Everything in Basic",
-      "f2": "Smart payment notifications",
+      "f2": "In-app alerts",
       "f3": "Multiple users",
       "f4": "Advanced analytics",
       "f5": "Priority support",
@@ -832,8 +832,8 @@
   "reminders": {
     "badge": "Reminders",
     "proBadge": "PRO ✦",
-    "title": "WhatsApp reminders",
-    "subtitle": "Send automatic WhatsApp reminders to debtor customers",
+    "title": "Payment reminders",
+    "subtitle": "Automatic alerts about customers who are late to pay",
     "back": "Back",
     "runButton": "Run reminders",
     "running": "Sending...",
@@ -908,7 +908,7 @@
     "topic2": "Didn't receive the verification code",
     "topic3": "Payment issue",
     "topic4": "Adding a customer",
-    "topic5": "WhatsApp reminders",
+    "topic5": "Payment reminders",
     "topic6": "Data export",
     "submit": "Send support request",
     "submitting": "Sending...",
@@ -1082,7 +1082,7 @@
     },
     "pro": {
       "name": "Pro", "desc": "For shops that need advanced features",
-      "f1": "Everything in Basic", "f2": "Smart payment notifications", "f3": "Multiple users", "f4": "Advanced analytics", "f5": "Priority support"
+      "f1": "Everything in Basic", "f2": "In-app alerts", "f3": "Multiple users", "f4": "Advanced analytics", "f5": "Priority support"
     }
   },
   "checkoutPage": {
@@ -1106,7 +1106,7 @@
     "checkoutFailed": "Failed to start checkout",
     "connectionError": "Connection error, please try again",
     "basic": { "name": "Basic Plan", "label": "Most popular", "desc": "Great for small shop owners who want to manage their debts easily.", "f1": "Unlimited customers and suppliers", "f2": "Track debts and payments", "f3": "Clear reports", "f4": "Data export" },
-    "pro": { "name": "Pro Plan", "label": "Advanced features", "desc": "For shops that need more advanced tools and better analytics.", "f1": "Everything in Basic", "f2": "Smart notifications", "f3": "Multiple users", "f4": "Advanced analytics" }
+    "pro": { "name": "Pro Plan", "label": "Advanced features", "desc": "For shops that need more advanced tools and better analytics.", "f1": "Everything in Basic", "f2": "In-app alerts", "f3": "Multiple users", "f4": "Advanced analytics" }
   },
   "billingSuccess": {
     "title": "Subscribed successfully!",
