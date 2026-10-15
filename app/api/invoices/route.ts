@@ -5,7 +5,7 @@ import { Invoice } from "@/models/Invoice";
 import { Customer } from "@/models/Customer";
 import { User } from "@/models/User";
 import { createNotification } from "@/lib/createNotification";
-import { sendWhatsApp, waParam } from "@/lib/whatsapp";
+import { sendWhatsApp, waParam, WHATSAPP_ENABLED } from "@/lib/whatsapp";
 import { hasFeature } from "@/lib/permissions";
 import { getToken } from "next-auth/jwt";
 import { getApiOwner } from "@/lib/apiAuth";
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     // 📱 WhatsApp to the customer — Pro plan only (it is sent from Dayni's number
     // and costs per message), and only if the customer has a phone.
-    if (customer.phone && hasFeature(user.plan, "notifications")) {
+    if (WHATSAPP_ENABLED && customer.phone && hasFeature(user.plan, "notifications")) {
       const waResult = await sendWhatsApp({
         to: customer.phone,
         kind: "invoice",

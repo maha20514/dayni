@@ -8,7 +8,7 @@ import { Payment } from "@/models/Payment";
 import { Notification } from "@/models/Notification";
 import { Customer } from "@/models/Customer";
 import { User } from "@/models/User";
-import { sendWhatsApp, waParam } from "./whatsapp";
+import { sendWhatsApp, waParam, WHATSAPP_ENABLED } from "./whatsapp";
 import { createNotification } from "./createNotification";
 
 type ReminderLevel = 0 | 1 | 2 | 3;
@@ -101,7 +101,7 @@ export async function runReminders() {
       });
 
       // WhatsApp to the customer.
-      if (customer.phone) {
+      if (WHATSAPP_ENABLED && customer.phone) {
         const result = await sendWhatsApp({
           to: customer.phone,
           kind: "reminder",

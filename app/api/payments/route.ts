@@ -5,7 +5,7 @@ import { Payment } from "@/models/Payment";
 import { Customer } from "@/models/Customer";
 import { User } from "@/models/User";
 import { createNotification } from "@/lib/createNotification";
-import { sendWhatsApp, waParam } from "@/lib/whatsapp";
+import { sendWhatsApp, waParam, WHATSAPP_ENABLED } from "@/lib/whatsapp";
 import { hasFeature } from "@/lib/permissions";
 import { getToken } from "next-auth/jwt";
 import { getApiOwner } from "@/lib/apiAuth";
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // ── WhatsApp notification — sent to the customer, always in Arabic ──
     const owner = await User.findById(userId).select("plan shopName");
-    if (customer.phone && owner && hasFeature(owner.plan, "notifications")) {
+    if (WHATSAPP_ENABLED && customer.phone && owner && hasFeature(owner.plan, "notifications")) {
       const receiptLink = `${process.env.NEXT_PUBLIC_SITE_URL}/payments/${payment._id}`;
 
       const waResult = await sendWhatsApp({

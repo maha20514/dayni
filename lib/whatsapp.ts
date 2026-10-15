@@ -4,6 +4,10 @@
 // has not messaged us in the last 24h) are only delivered if they use a Meta-APPROVED
 // TEMPLATE. Free-form text is rejected (error 131047). Template names come from env;
 // if one is not set we fall back to free-form text (works only inside the 24h window).
+// Master switch. WhatsApp sending is hidden/disabled until WHATSAPP_ENABLED=true is set
+// (Vercel env) — the code below stays intact and is re-activated just by flipping it.
+export const WHATSAPP_ENABLED = process.env.WHATSAPP_ENABLED === "true";
+
 export type WaKind = "invoice" | "payment" | "reminder";
 
 const TEMPLATE_ENV: Record<WaKind, string | undefined> = {
@@ -28,6 +32,7 @@ export async function sendWhatsApp({
   kind?: WaKind;
   params?: string[];
 }): Promise<{ success: boolean; error?: string }> {
+  if (!WHATSAPP_ENABLED) return { success: false, error: "WhatsApp disabled" };
   try {
     const token   = process.env.WHATSAPP_TOKEN;
     const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
